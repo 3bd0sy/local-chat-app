@@ -1,0 +1,201 @@
+/**
+ * Type definitions for the chat application
+ */
+
+// User information interface
+export interface UserInfo {
+  sid: string;
+  ip: string;
+  username: string;
+  status: "online" | "busy" | "offline";
+  in_call?: boolean;
+}
+
+// Message interface
+export interface Message {
+  id: string;
+  from_sid: string;
+  from_username: string;
+  message: string;
+  timestamp: string;
+  type: "sent" | "received";
+}
+
+// Chat request interface
+export interface ChatRequest {
+  request_id: string;
+  from_sid: string;
+  from_username: string;
+  from_ip: string;
+  to_sid?: string;
+  type: "chat" | "video" | "audio";
+  timestamp: string;
+}
+
+// Call types
+export type CallType = "video" | "audio";
+
+// Connection state
+export interface ConnectionState {
+  connected: boolean;
+  connecting: boolean;
+  error: string | null;
+}
+
+// WebRTC state interface
+export interface WebRTCState {
+  peerConnection: RTCPeerConnection | null;
+  localStream: MediaStream | null;
+  remoteStream: MediaStream | null;
+  pendingCandidates: RTCIceCandidate[];
+}
+
+// App state interface
+export interface AppState {
+  myInfo: UserInfo;
+  currentRoom: string | null;
+  partnerSid: string | null;
+  partnerInfo: UserInfo | null;
+  pendingRequest: ChatRequest | null;
+  isInCall: boolean;
+  isMuted: boolean;
+  isVideoOff: boolean;
+  callType: CallType | null;
+}
+
+// Socket event payloads
+export interface SocketEventPayloads {
+  // Connection events
+  connection_established: { sid: string; ip: string; username: string };
+  online_users_list: { users: UserInfo[] };
+
+  // User events
+  get_online_users: void;
+  set_username: { username: string };
+
+  // Chat events
+  incoming_chat_request: ChatRequest;
+  send_chat_request: { target_sid: string };
+  chat_request_accepted: {
+    room_id: string;
+    partner_sid: string;
+    partner_username: string;
+    partner_ip: string;
+  };
+  accept_chat_request: { request_id: string };
+  chat_started: {
+    room_id: string;
+    partner_sid: string;
+    partner_username: string;
+    partner_ip: string;
+  };
+  chat_request_rejected: { by_username: string };
+  reject_chat_request: { request_id: string };
+  receive_private_message: {
+    from_sid: string;
+    from_username: string;
+    message: string;
+    timestamp: string;
+  };
+  send_private_message: {
+    room_id: string;
+    message: string;
+    timestamp: string;
+  };
+  partner_left_chat: { username: string };
+  leave_chat: { room_id: string };
+
+  // Call events
+  incoming_call: ChatRequest;
+  start_call: {
+    target_sid: string;
+    call_type: CallType;
+  };
+  call_accepted: {
+    room_id: string;
+    partner_sid: string;
+    call_type: CallType;
+  };
+  accept_call: { request_id: string };
+  call_started: {
+    room_id: string;
+    partner_sid: string;
+    call_type: CallType;
+  };
+  call_rejected: { by_username: string };
+  reject_call: { request_id: string };
+  call_ended: { ended_by: string };
+  end_call: { room_id: string };
+
+  // WebRTC events
+  webrtc_offer: {
+    target_sid: string;
+    offer: RTCSessionDescriptionInit;
+  };
+  webrtc_answer: {
+    target_sid: string;
+    answer: RTCSessionDescriptionInit;
+  };
+  webrtc_ice_candidate: {
+    target_sid: string;
+    candidate: RTCIceCandidateInit;
+  };
+  webrtc_call_ended: Record<string, never>;
+}
+
+// Socket emit payloads (إصدار بديل لاستخدامه في emit إذا كان مختلفاً)
+export interface SocketEmitPayloads {
+  get_online_users: void;
+  set_username: { username: string };
+  send_chat_request: { target_sid: string };
+  accept_chat_request: { request_id: string };
+  reject_chat_request: { request_id: string };
+  send_private_message: {
+    room_id: string;
+    message: string;
+    timestamp: string;
+  };
+  leave_chat: { room_id: string };
+  start_call: {
+    target_sid: string;
+    call_type: CallType;
+  };
+  accept_call: { request_id: string };
+  reject_call: { request_id: string };
+  end_call: { room_id: string };
+  webrtc_offer: {
+    target_sid: string;
+    offer: RTCSessionDescriptionInit;
+  };
+  webrtc_answer: {
+    target_sid: string;
+    answer: RTCSessionDescriptionInit;
+  };
+  webrtc_ice_candidate: {
+    target_sid: string;
+    candidate: RTCIceCandidateInit;
+  };
+}
+
+// Toast notification
+export interface ToastNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: "success" | "error" | "info" | "warning";
+  duration?: number;
+}
+
+// Extend RTCIceCandidateInit type to fix property 'type' error
+declare global {
+  interface RTCIceCandidateInit {
+    candidate?: string;
+    sdpMid?: string | null;
+    sdpMLineIndex?: number | null;
+    usernameFragment?: string | null;
+  }
+}
+
+// Helper types for socket service
+export type SocketEvent = keyof SocketEventPayloads;
+export type SocketEventData<T extends SocketEvent> = SocketEventPayloads[T];
