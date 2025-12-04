@@ -3,7 +3,7 @@ HTTP route handlers for the Flask application
 """
 
 import os
-from flask import render_template, jsonify, request, send_from_directory
+from flask import jsonify, request, send_from_directory
 from services.network_service import get_local_ip
 from werkzeug.utils import secure_filename
 
@@ -15,13 +15,6 @@ def register_http_handlers(app):
     Args:
         app: Flask application instance
     """
-
-    @app.route("/")
-    def index():
-        """
-        Serve the main chat interface
-        """
-        return render_template("new_index.html")
 
     @app.route("/api/my-ip")
     def get_my_ip():
@@ -67,6 +60,17 @@ def register_http_handlers(app):
         upload_path = os.path.join("/static/uploads", conversation_id)
         return send_from_directory(upload_path, filename, as_attachment=True)
 
+
 def allowed_file(filename):
-    allowed_extensions = {"png", "jpg", "jpeg", "gif", "pdf", "docx", "txt", "zip","rar"}
+    allowed_extensions = {
+        "png",
+        "jpg",
+        "jpeg",
+        "gif",
+        "pdf",
+        "docx",
+        "txt",
+        "zip",
+        "rar",
+    }
     return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed_extensions

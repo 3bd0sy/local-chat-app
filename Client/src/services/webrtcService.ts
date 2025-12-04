@@ -11,7 +11,7 @@ class SocketService {
 
   constructor() {
     // Get server URL from environment variable or use default
-    this.serverUrl = "/socket.io"; //"https://173.10.10.250:5000"; //   import.meta.env.VITE_SOCKET_URL || "https://localhost:5000";
+    this.serverUrl = import.meta.env.VITE_API_URL;
     console.log("🔌 Socket.IO Server URL:", this.serverUrl);
   }
 
@@ -278,13 +278,11 @@ class WebRTCService {
         this.state.remoteStream.getTracks().length
       );
 
-     
       if (this.onTrackCallback) {
         console.log("📡 Calling onTrack callback");
         this.onTrackCallback(this.state.remoteStream);
       }
     };
-    // this.state.peerConnection = pc;
 
     // Debug peer connection state changes
     this.debugPeerConnection("After creation");
@@ -306,8 +304,6 @@ class WebRTCService {
     } else {
       console.warn("⚠️ No local stream available to add tracks");
     }
-
-   
 
     // Handle ICE candidates
     pc.onicecandidate = (event) => {
@@ -352,11 +348,6 @@ class WebRTCService {
     pc.onnegotiationneeded = () => {
       console.log("🤝 Negotiation needed event fired");
     };
-
-    // Handle track removal
-    // pc.ontrack = (event) => {
-    //   console.log("❌ Track removed:", event.track.kind);
-    // };
 
     console.log("🔗 ===== PEER CONNECTION CREATED =====");
     return pc;

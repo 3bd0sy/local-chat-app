@@ -230,10 +230,10 @@ localStorage.setItem("debug", "*");
 
 ## 🌟 Browser Support
 
-- **Chrome** 60+ 
-- **Firefox** 55+ 
-- **Safari** 11+ 
-- **Edge** 79+ 
+- **Chrome** 60+
+- **Firefox** 55+
+- **Safari** 11+
+- **Edge** 79+
 
 ## 📝 API Reference
 

@@ -7,13 +7,12 @@ import type { SocketEventPayloads } from "../types";
 
 class SocketService {
   private socket: Socket | null = null;
-  //   private serverUrl: string;
+  private serverUrl: string;
 
   constructor() {
     // Get server URL from environment variable or use default
-    // this.serverUrl = "/socket.io"; //"https://173.10.10.250:5000"; //   import.meta.env.VITE_SOCKET_URL || "https://localhost:5000";
-    // console.log("🔌 Socket.IO Server URL:", this.serverUrl);
-    console.log("🔌 Socket.IO will connect to same origin with proxy");
+    this.serverUrl = import.meta.env.VITE_API_URL;
+    console.log("🔌 Socket.IO Server URL:", this.serverUrl);
   }
 
   /**
@@ -27,8 +26,7 @@ class SocketService {
 
     console.log("Connecting to socket server...");
 
-    this.socket = io("/", {
-      path: "/socket.io",
+    this.socket = io(import.meta.env.VITE_API_URL, {
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 5,

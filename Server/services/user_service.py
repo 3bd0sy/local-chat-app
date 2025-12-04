@@ -23,7 +23,7 @@ def broadcast_user_list(socketio: SocketIO):
         }
         for sid, user_info in connected_users.items()
     ]
-
+    print(f"user service")
     socketio.emit("online_users_list", {"users": users_list})
 
 

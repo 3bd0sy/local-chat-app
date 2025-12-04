@@ -121,17 +121,3 @@ if __name__ == "__main__":
         import traceback
 
         traceback.print_exc()
-
-    # socketio.run(
-    #     app,
-    #     host="0.0.0.0",
-    #     port=port,
-    #     # debug=True,
-    #     debug=False,
-    #     ssl_context=(
-    #         "chat\certificate\localhost+2.pem",
-    #         "chat\certificate\localhost+2-key.pem",
-    #     ),
-    #     # ssl_context=("certificate/cert.pem", "certificate/key.pem"),
-    #     # allow_unsafe_werkzeug=True,
-    # )

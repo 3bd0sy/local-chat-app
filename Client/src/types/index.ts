@@ -143,7 +143,6 @@ export interface SocketEventPayloads {
   webrtc_call_ended: Record<string, never>;
 }
 
-// Socket emit payloads (إصدار بديل لاستخدامه في emit إذا كان مختلفاً)
 export interface SocketEmitPayloads {
   get_online_users: void;
   set_username: { username: string };

@@ -19,6 +19,65 @@ export const Sidebar: React.FC = () => {
   const { myInfo, onlineUsers, connected, sendChatRequest, startCall } =
     useChatContext();
 
+  // Filter out current user and remove duplicates
+  const filteredUsers = React.useMemo(() => {
+    console.log("🔍 ========================================");
+    console.log("🔍 FILTERING USERS");
+    console.log("🔍 ========================================");
+    console.log("🔍 My SID:", myInfo.sid);
+    console.log("🔍 My IP:", myInfo.ip);
+    console.log("🔍 Total users from server:", onlineUsers.length);
+    console.log(
+      "🔍 Users list:",
+      onlineUsers.map((u) => ({
+        sid: u.sid,
+        username: u.username,
+        ip: u.ip,
+      }))
+    );
+    return onlineUsers;
+
+    // Remove current user and duplicates
+    const uniqueUsers = onlineUsers.filter((user, index, self) => {
+      // Exclude current user by SID
+      if (user.sid === myInfo.sid) {
+        console.log("🔍 ❌ Excluding current user (by SID):", user.sid);
+        return false;
+      }
+
+      // Exclude current user by IP (fallback)
+      if (user.ip === myInfo.ip && myInfo.ip) {
+        console.log("🔍 ❌ Excluding current user (by IP):", user.ip);
+        return false;
+      }
+
+      // Keep only first occurrence (remove duplicates by SID)
+      const isFirstOccurrence =
+        index === self.findIndex((u) => u.sid === user.sid);
+      if (!isFirstOccurrence) {
+        console.log("🔍 ❌ Excluding duplicate user:", user.sid);
+      }
+      return isFirstOccurrence;
+    });
+
+    console.log("🔍 ========================================");
+    console.log("🔍 FILTERING RESULTS:");
+    console.log("🔍 Before:", onlineUsers.length);
+    console.log("🔍 After:", uniqueUsers.length);
+    console.log("🔍 Removed:", onlineUsers.length - uniqueUsers.length);
+    console.log(
+      "🔍 Filtered users:",
+      uniqueUsers.map((u) => ({
+        sid: u.sid,
+        username: u.username,
+        ip: u.ip,
+      }))
+    );
+    console.log("🔍 ========================================");
+
+    return uniqueUsers;
+  }, [onlineUsers, myInfo.sid, myInfo.ip]);
+
   return (
     <div className="w-80 h-screen card flex flex-col overflow-hidden border-r border-white/10">
       {/* Header with user info */}
@@ -54,18 +113,18 @@ export const Sidebar: React.FC = () => {
         <div className="flex items-center gap-2 mb-4">
           <Users className="w-5 h-5 text-primary-400" />
           <h2 className="font-display font-semibold text-lg">
-            Online Users ({onlineUsers.length})
+            Online Users ({filteredUsers.length})
           </h2>
         </div>
 
-        {onlineUsers.length === 0 ? (
+        {filteredUsers.length === 0 ? (
           <div className="text-center py-12 text-white/50">
             <Users className="w-12 h-12 mx-auto mb-2 opacity-30" />
-            <p>No users online</p>
+            <p>No other users online</p>
           </div>
         ) : (
           <div className="space-y-2">
-            {onlineUsers.map((user) => (
+            {filteredUsers.map((user) => (
               <UserItem
                 key={user.sid}
                 user={user}
