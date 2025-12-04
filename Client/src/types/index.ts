@@ -131,14 +131,17 @@ export interface SocketEventPayloads {
   webrtc_offer: {
     target_sid: string;
     offer: RTCSessionDescriptionInit;
+    from_sid: string;
   };
   webrtc_answer: {
     target_sid: string;
     answer: RTCSessionDescriptionInit;
+    from_sid: string;
   };
   webrtc_ice_candidate: {
     target_sid: string;
     candidate: RTCIceCandidateInit;
+    from_sid: string;
   };
   webrtc_call_ended: Record<string, never>;
 }
@@ -165,14 +168,17 @@ export interface SocketEmitPayloads {
   webrtc_offer: {
     target_sid: string;
     offer: RTCSessionDescriptionInit;
+    from_sid: string;
   };
   webrtc_answer: {
     target_sid: string;
     answer: RTCSessionDescriptionInit;
+    from_sid: string;
   };
   webrtc_ice_candidate: {
     target_sid: string;
     candidate: RTCIceCandidateInit;
+    from_sid: string;
   };
 }
 

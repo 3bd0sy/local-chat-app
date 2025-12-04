@@ -8,6 +8,11 @@ import eventlet.wsgi
 
 eventlet.monkey_patch()
 
+# Disable bytecode generation to prevent cluttering the filesystem with .pyc files
+import sys
+
+sys.dont_write_bytecode = True
+
 import os
 from flask import Flask
 from flask_socketio import SocketIO
@@ -30,9 +35,9 @@ def create_app():
         cors_allowed_origins="*",
         ping_timeout=60,
         ping_interval=25,
-        async_mode="eventlet",  # async_mode="threading",
-        logger=False,           # Enable logging for debugging
-        engineio_logger=False,  # Enable engine.io logging
+        async_mode="eventlet",      # async_mode="threading",
+        logger=False,               # Enable logging for debugging
+        engineio_logger=False,      # Enable engine.io logging
     )
 
     # Register handlers

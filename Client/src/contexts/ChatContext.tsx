@@ -116,7 +116,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     socket.removeAllListeners("webrtc_offer");
     socket.removeAllListeners("webrtc_answer");
     socket.removeAllListeners("webrtc_ice_candidate");
- 
+
     socket.on("connect", () => {
       setConnected(true);
       console.log("Connected to server, socket ID:", socket.id);
@@ -124,7 +124,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
     return () => {
       console.log("Component unmounting (keeping socket connected)");
-   
     };
   }, []); // Empty dependency array
 
@@ -242,8 +241,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   }, []);
 
   const initializeCall = useCallback(
-    async (type: CallType, isInitiator: boolean, partnerSidParam?: string) => {
+    async (
+      type: CallType,
+      isInitiator: boolean,
+      partnerSidParam?: string,
+      room_id?: string
+    ) => {
       console.log("🎥 ===== INITIALIZE CALL =====");
+      console.log("room_id param:", room_id);
       console.log("🎥 Type:", type, "Initiator:", isInitiator);
 
       try {
@@ -657,7 +662,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         "🧊 Candidate:",
         data.candidate?.candidate?.substring(0, 50) + "..."
       );
-      console.log("🧊 Candidate type:", data.candidate?.type);
 
       try {
         console.log("🧊 Step 1: Adding ICE candidate...");
