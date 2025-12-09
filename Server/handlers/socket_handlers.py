@@ -22,45 +22,20 @@ def get_client_ip():
     WORKING METHOD for direct connections (no proxy)
     """
     try:
-        print(f"\n{'='*60}")
-        print("🔍 DEBUG IP DETECTION START")
-        print(f"{'='*60}")
-
         if "wsgi.input" in request.environ:
             wsgi_input = request.environ["wsgi.input"]
-            print(f"🔍 wsgi.input type: {type(wsgi_input)}")
-            print(f"🔍 wsgi.input has _sock: {hasattr(wsgi_input, '_sock')}")
 
             if hasattr(wsgi_input, "_sock"):
                 sock = wsgi_input._sock
-                print(f"🔍 Socket type: {type(sock)}")
-                print(f"🔍 Socket has getpeername: {hasattr(sock, 'getpeername')}")
 
                 if hasattr(sock, "getpeername"):
                     try:
                         peer = sock.getpeername()
-                        print(f"✅ REAL IP from socket.getpeername(): {peer[0]}")
-                        print(f"✅ Port: {peer[1] if len(peer) > 1 else 'N/A'}")
                         return peer[0]
                     except Exception as e:
                         print(f"❌ Error in getpeername: {e}")
 
         remote_addr = request.remote_addr
-        print(f"🔍 request.remote_addr: {remote_addr}")
-
-        print(f"\n🔍 Available environ keys:")
-        for key in sorted(request.environ.keys()):
-            if "IP" in key.upper() or "ADDR" in key.upper() or "REMOTE" in key.upper():
-                print(f"  {key}: {request.environ[key]}")
-
-        print(f"\n🔍 All HTTP Headers:")
-        for header, value in request.headers.items():
-            if "IP" in header.upper() or "FORWARD" in header.upper():
-                print(f"  {header}: {value}")
-
-        print(f"{'='*60}")
-        print("🔍 DEBUG IP DETECTION END")
-        print(f"{'='*60}\n")
 
         if remote_addr and remote_addr != "127.0.0.1":
             return remote_addr
@@ -96,34 +71,8 @@ def register_socket_handlers(app, socketio: SocketIO):
                 existing_user = user_info
                 break
 
-        if existing_user:
-            print(
-                f"⚠️ User reconnected: {client_ip}. Updating SID from {existing_user['sid']} to {request.sid}"
-            )
-
             del connected_users[existing_user["sid"]]
-        print(f"\n\n\n\nDetected client IP: {client_ip} \n\n\n\n")
         transport = request.environ.get("HTTP_UPGRADE", "polling").lower()
-
-        print("=" * 60)
-        print(f"✅ NEW CONNECTION")
-        print("=" * 60)
-        print(f"Socket ID: {request.sid}")
-        print(f"Client IP: {client_ip}")
-        print(f"Transport: {transport}")
-        print(f"User-Agent: {request.headers.get('User-Agent', 'Unknown')[:50]}...")
-
-        # Debug: Print all IP-related info
-        print("\n🔍 IP DETECTION DEBUG:")
-        print(f"  request.remote_addr: {request.remote_addr}")
-        print(
-            f"  HTTP_X_FORWARDED_FOR: {request.environ.get('HTTP_X_FORWARDED_FOR', 'Not set')}"
-        )
-        print(f"  HTTP_X_REAL_IP: {request.environ.get('HTTP_X_REAL_IP', 'Not set')}")
-        print(
-            f"  X-Forwarded-For (header): {request.headers.get('X-Forwarded-For', 'Not set')}"
-        )
-        print("=" * 60)
 
         logger.info(f"New connection: {request.sid} via {transport} from {client_ip}")
 
@@ -158,9 +107,6 @@ def register_socket_handlers(app, socketio: SocketIO):
         """
         if request.sid in connected_users:
             user_info = connected_users[request.sid]
-            print(
-                f"❌ Client disconnected: {request.sid} ({user_info.get('ip', 'unknown')})"
-            )
 
             # Leave any active rooms
             if user_info.get("current_room"):
@@ -195,7 +141,7 @@ def register_socket_handlers(app, socketio: SocketIO):
         Get list of all online users
         """
         users_list = get_user_list(exclude_sid=request.sid)
-        print(f"socket handler")
+
         emit("online_users_list", {"users": users_list})
 
     @socketio.on("send_chat_request")
@@ -244,8 +190,6 @@ def register_socket_handlers(app, socketio: SocketIO):
                 "to_username": connected_users[target_sid]["username"],
             },
         )
-
-        print(f"💬 Chat request from {request.sid} to {target_sid}")
 
     @socketio.on("accept_chat_request")
     def handle_accept_chat_request(data):
@@ -298,8 +242,6 @@ def register_socket_handlers(app, socketio: SocketIO):
         # Remove pending request
         del pending_requests[request_id]
 
-        print(f"✅ Chat accepted: {from_sid} <-> {to_sid}")
-
     @socketio.on("reject_chat_request")
     def handle_reject_chat_request(data):
         """
@@ -322,8 +264,6 @@ def register_socket_handlers(app, socketio: SocketIO):
 
         # Remove pending request
         del pending_requests[request_id]
-
-        print(f"❌ Chat rejected by {request.sid}")
 
     @socketio.on("send_private_message")
     def handle_private_message(data):
@@ -349,8 +289,6 @@ def register_socket_handlers(app, socketio: SocketIO):
             room=room_id,
             include_self=False,
         )
-
-        print(f"💬 Message in {room_id}: {message[:30]}...")
 
     @socketio.on("start_call")
     def handle_start_call(data):
@@ -395,8 +333,6 @@ def register_socket_handlers(app, socketio: SocketIO):
         )
 
         emit("call_ringing", {"to_username": connected_users[target_sid]["username"]})
-
-        print(f"📞 {call_type} call from {request.sid} to {target_sid}")
 
     @socketio.on("accept_call")
     def handle_accept_call(data):
@@ -450,8 +386,6 @@ def register_socket_handlers(app, socketio: SocketIO):
         # Broadcast updated user list
         broadcast_user_list(socketio)
 
-        print(f"✅ Call started: {from_sid} <-> {to_sid}")
-
     @socketio.on("reject_call")
     def handle_reject_call(data):
         """
@@ -475,8 +409,6 @@ def register_socket_handlers(app, socketio: SocketIO):
         # Remove pending request
         del pending_requests[request_id]
 
-        print(f"❌ Call rejected by {request.sid}")
-
     @socketio.on("webrtc_offer")
     def handle_webrtc_offer(data):
         """
@@ -491,7 +423,6 @@ def register_socket_handlers(app, socketio: SocketIO):
                 {"from_sid": request.sid, "offer": offer},
                 room=target_sid,
             )
-            print(f"📤 WebRTC offer forwarded: {request.sid} -> {target_sid}")
 
     @socketio.on("webrtc_answer")
     def handle_webrtc_answer(data):
@@ -507,7 +438,6 @@ def register_socket_handlers(app, socketio: SocketIO):
                 {"from_sid": request.sid, "answer": answer},
                 room=target_sid,
             )
-            print(f"📤 WebRTC answer forwarded: {request.sid} -> {target_sid}")
 
     @socketio.on("webrtc_ice_candidate")
     def handle_ice_candidate(data):
@@ -523,7 +453,6 @@ def register_socket_handlers(app, socketio: SocketIO):
                 {"from_sid": request.sid, "candidate": candidate},
                 room=target_sid,
             )
-            # Don't print for every ICE candidate (too verbose)
 
     @socketio.on("end_call")
     def handle_end_call(data):
@@ -553,15 +482,12 @@ def register_socket_handlers(app, socketio: SocketIO):
             # Broadcast updated user list
             broadcast_user_list(socketio)
 
-            print(f"📵 Call ended: {room_id}")
-
     @socketio.on("webrtc_end_call")
     def handle_webrtc_end_call(data):
         """
         Notify peer that call has ended
         """
         target_sid = data.get("target_sid")
-        print(f"📞 Call end requested by {request.sid}, notifying {target_sid}")
         if target_sid:
             emit("webrtc_call_ended", room=target_sid)
 
@@ -583,5 +509,3 @@ def register_socket_handlers(app, socketio: SocketIO):
                 {"username": connected_users[request.sid]["username"]},
                 room=room_id,
             )
-
-            print(f"👋 User left chat: {request.sid}")

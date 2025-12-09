@@ -1,126 +1,220 @@
-/**
- * Socket.IO service for real-time communication
- */
-
 import { io, Socket } from "socket.io-client";
 import type { SocketEventPayloads } from "../types";
+import { serverConfig } from "../serverConfig";
+
+type EventHandler<K extends keyof SocketEventPayloads> = (
+  data: SocketEventPayloads[K]
+) => void;
 
 class SocketService {
   private socket: Socket | null = null;
   private serverUrl: string;
+  private eventHandlers: Map<string, EventHandler<any>[]> = new Map();
+  private isConnected = false;
+  private connectionPromise: Promise<Socket> | null = null;
 
   constructor() {
-    // Get server URL from environment variable or use default
-    this.serverUrl = import.meta.env.VITE_API_URL;
-    console.log("🔌 Socket.IO Server URL:", this.serverUrl);
+    const url = serverConfig.apiUrl;
+
+    this.serverUrl = url || "http://localhost:5000";
   }
 
-  /**
-   * Connect to the socket server
-   */
-  connect(): Socket {
+  connect(): Promise<Socket> {
     if (this.socket?.connected) {
-      console.log(" Already connected to socket server");
-      return this.socket;
+      return Promise.resolve(this.socket);
     }
 
-    console.log("Connecting to socket server...");
+    if (this.connectionPromise) {
+      return this.connectionPromise;
+    }
 
-    this.socket = io(import.meta.env.VITE_API_URL, {
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      autoConnect: true,
-      secure: true,
-      rejectUnauthorized: false, // For self-signed certificates
+    this.connectionPromise = new Promise((resolve, reject) => {
+      this.socket = io(this.serverUrl, {
+        transports: ["websocket", "polling"],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        autoConnect: true,
+        timeout: 10000,
+        rejectUnauthorized: false,
+      });
+
+      this.socket.on("connect", () => {
+        this.isConnected = true;
+        resolve(this.socket!);
+        this.connectionPromise = null;
+      });
+
+      this.socket.on("connect_error", (error) => {
+        console.error("❌ Connection error:", error.message);
+        reject(error);
+        this.connectionPromise = null;
+      });
+
+      this.socket.on("disconnect", () => {
+        this.isConnected = false;
+      });
     });
 
-    // Connection event listeners for debugging
-    this.socket.on("connect", () => {
-      console.log(" Connected to socket server:", this.socket?.id);
-    });
-
-    this.socket.on("connect_error", (error) => {
-      console.error("❌ Connection error:", error.message);
-    });
-
-    this.socket.on("disconnect", (reason) => {
-      console.log("⚠️ Disconnected from server:", reason);
-    });
-
-    return this.socket;
+    return this.connectionPromise;
   }
 
-  /**
-   * Disconnect from the socket server
-   */
   disconnect(): void {
+    this.eventHandlers.clear();
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
     }
+    this.isConnected = false;
+    this.connectionPromise = null;
   }
 
-  /**
-   * Get the socket instance
-   */
+  on<K extends keyof SocketEventPayloads>(
+    event: K,
+    handler: EventHandler<K>
+  ): () => void {
+    const handlers = this.eventHandlers.get(event) || [];
+
+    if (handlers.includes(handler)) {
+      console.warn(`⚠️ Handler already registered for event: ${event}`);
+      return () => this.off(event, handler);
+    }
+
+    handlers.push(handler);
+    this.eventHandlers.set(event, handlers);
+
+    const socketHandler = (data: any) => {
+      handler(data);
+    };
+
+    this.socket?.on(event as string, socketHandler);
+
+    return () => {
+      this.off(event, handler);
+    };
+  }
+
+  off<K extends keyof SocketEventPayloads>(
+    event: K,
+    handler?: EventHandler<K>
+  ): void {
+    if (!handler) {
+      this.eventHandlers.delete(event);
+      this.socket?.off(event as string);
+      return;
+    }
+
+    const handlers = this.eventHandlers.get(event) || [];
+    const index = handlers.indexOf(handler);
+
+    if (index > -1) {
+      handlers.splice(index, 1);
+      this.eventHandlers.set(event, handlers);
+      this.socket?.off(event as string, handler as any);
+    }
+  }
+
+  emit<K extends keyof SocketEventPayloads>(
+    event: K,
+    data?: SocketEventPayloads[K],
+    acknowledge?: (response: any) => void
+  ): Promise<any> {
+    return new Promise(async (resolve, reject) => {
+      if (!this.socket || !this.isConnected) {
+        console.warn(
+          `⚠️ Socket not connected for event: ${event}, attempting to reconnect...`
+        );
+
+        try {
+          await this.connect();
+        } catch (err) {
+          const error = `Cannot emit ${event}: Socket not connected`;
+          console.warn(`⚠️ ${error}`);
+          reject(new Error(error));
+          return;
+        }
+      }
+      if (!this.socket || !this.isConnected) {
+        const error = `Cannot emit ${event}: Socket still not connected`;
+        console.error(`❌ ${error}`);
+        reject(new Error(error));
+        return;
+      }
+
+      const emitData: any = data ? { ...data } : {};
+
+      emitData.timestamp = new Date().toISOString();
+
+      const eventsRequiringFromSid = [
+        "webrtc_offer",
+        "webrtc_answer",
+        "webrtc_ice_candidate",
+      ];
+
+      if (eventsRequiringFromSid.includes(event as string)) {
+        const socketId = this.getSocketId();
+        if (socketId) {
+          emitData.from_sid = socketId;
+        } else {
+          console.warn(
+            `⚠️ Cannot get socket ID for event: ${event}, sending without from_sid`
+          );
+        }
+      }
+
+      try {
+        if (acknowledge) {
+          this.socket.emit(event as string, emitData, (response: any) => {
+            if (response?.error) {
+              reject(new Error(response.error));
+            } else {
+              acknowledge(response);
+              resolve(response);
+            }
+          });
+        } else {
+          this.socket.emit(event as string, emitData);
+          resolve(undefined);
+        }
+      } catch (error) {
+        console.error(`❌ Error emitting ${event}:`, error);
+        if (
+          event === "webrtc_offer" ||
+          event === "webrtc_answer" ||
+          event === "webrtc_ice_candidate"
+        ) {
+          console.warn(`🔄 Retrying ${event} in 100ms...`);
+          setTimeout(() => {
+            this.emit(event, data, acknowledge).then(resolve).catch(reject);
+          }, 100);
+        } else {
+          reject(error);
+        }
+      }
+    });
+  }
+
   getSocket(): Socket | null {
     return this.socket;
   }
 
-  /**
-   * Emit an event to the server
-   */
-  emit<K extends keyof SocketEventPayloads>(event: K, data?: any): void {
-    if (this.socket) {
-      this.socket.emit(event as string, data);
-    }
+  isConnectedState(): boolean {
+    return this.isConnected;
   }
 
-  /**
-   * Listen to an event from the server
-   */
-  on<K extends keyof SocketEventPayloads>(
-    event: K,
-    callback: (data: SocketEventPayloads[K]) => void
-  ): void {
-    if (this.socket) {
-      this.socket.on(event as string, callback);
-    }
+  getSocketId(): string | null {
+    return this.socket?.id || null;
   }
 
-  /**
-   * Remove event listener
-   */
-  off<K extends keyof SocketEventPayloads>(
-    event: K,
-    callback?: (data: SocketEventPayloads[K]) => void
-  ): void {
-    if (this.socket) {
-      this.socket.off(event as string, callback);
+  removeAllListeners(event?: string): void {
+    if (event) {
+      this.eventHandlers.delete(event);
+      this.socket?.removeAllListeners(event);
+    } else {
+      this.eventHandlers.clear();
+      this.socket?.removeAllListeners();
     }
-  }
-
-  /**
-   * Listen to an event once
-   */
-  once<K extends keyof SocketEventPayloads>(
-    event: K,
-    callback: (data: SocketEventPayloads[K]) => void
-  ): void {
-    if (this.socket) {
-      this.socket.once(event as string, callback);
-    }
-  }
-
-  /**
-   * Check if socket is connected
-   */
-  isConnected(): boolean {
-    return this.socket?.connected || false;
   }
 }
 
-// Export singleton instance
 export const socketService = new SocketService();

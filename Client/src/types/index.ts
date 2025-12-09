@@ -7,7 +7,7 @@ export interface UserInfo {
   sid: string;
   ip: string;
   username: string;
-  status: "online" | "busy" | "offline";
+  status: "online" | "busy" | "offline" | "in_call";
   in_call?: boolean;
 }
 
@@ -19,17 +19,6 @@ export interface Message {
   message: string;
   timestamp: string;
   type: "sent" | "received";
-}
-
-// Chat request interface
-export interface ChatRequest {
-  request_id: string;
-  from_sid: string;
-  from_username: string;
-  from_ip: string;
-  to_sid?: string;
-  type: "chat" | "video" | "audio";
-  timestamp: string;
 }
 
 // Call types
@@ -66,6 +55,9 @@ export interface AppState {
 // Socket event payloads
 export interface SocketEventPayloads {
   // Connection events
+  connect: void;
+  disconnect: void;
+
   connection_established: { sid: string; ip: string; username: string };
   online_users_list: { users: UserInfo[] };
 
@@ -131,17 +123,17 @@ export interface SocketEventPayloads {
   webrtc_offer: {
     target_sid: string;
     offer: RTCSessionDescriptionInit;
-    from_sid: string;
+    from_sid?: string;
   };
   webrtc_answer: {
     target_sid: string;
     answer: RTCSessionDescriptionInit;
-    from_sid: string;
+    from_sid?: string;
   };
   webrtc_ice_candidate: {
     target_sid: string;
     candidate: RTCIceCandidateInit;
-    from_sid: string;
+    from_sid?: string;
   };
   webrtc_call_ended: Record<string, never>;
 }
@@ -199,6 +191,93 @@ declare global {
     sdpMLineIndex?: number | null;
     usernameFragment?: string | null;
   }
+}
+
+// User Types
+export type UserStatus = "online" | "offline" | "busy" | "in_call";
+
+export interface UserInfo {
+  sid: string;
+  ip: string;
+  username: string;
+  status: UserStatus;
+}
+
+// Message Types
+export interface Message {
+  id: string;
+  from_sid: string;
+  from_username: string;
+  message: string;
+  timestamp: string;
+  type: "sent" | "received";
+}
+
+// Request Types
+export type RequestType = "chat" | "call";
+
+export interface BaseRequest {
+  request_id: string;
+  from_sid: string;
+  from_username: string;
+  type: RequestType;
+  timestamp: string;
+}
+
+export interface ChatState {
+  myInfo: UserInfo;
+  onlineUsers: UserInfo[];
+  currentRoom: string | null;
+  partnerSid: string | null;
+  partnerInfo: UserInfo | null;
+  pendingChatRequest: ChatRequest | null;
+  messages: Message[];
+  connected: boolean;
+}
+
+// Event Data Types
+export interface ConnectionEstablishedData {
+  sid: string;
+  ip: string;
+  username: string;
+}
+
+export interface OnlineUsersData {
+  users: UserInfo[];
+}
+
+export interface ChatStartedData {
+  room_id: string;
+  partner_sid: string;
+  partner_username: string;
+  partner_ip: string;
+}
+
+export interface PrivateMessageData {
+  from_sid: string;
+  from_username: string;
+  message: string;
+  timestamp: string;
+}
+
+export interface PartnerLeftData {
+  username: string;
+  room_id: string;
+}
+
+export interface ChatRequest {
+  request_id: string;
+  from_sid: string;
+  from_username: string;
+  from_ip: string;
+}
+
+export interface CallRequest {
+  request_id: string;
+  from_sid: string;
+  from_username: string;
+  from_ip: string;
+  call_type: CallType;
 }
 
 // Helper types for socket service

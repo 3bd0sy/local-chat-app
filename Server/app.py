@@ -1,5 +1,5 @@
 """
-Enhanced Local Network Chat Application with Video/Audio
+Local Network Chat Application
 Main application entry point
 """
 
@@ -22,6 +22,21 @@ from handlers.socket_handlers import register_socket_handlers
 from services.network_service import get_local_ip
 
 
+
+
+name = """
+         .d8888b.  888888b.   8888888b.   .d88888b.          .d8888b. Y88b   d88P 
+        d88P  Y88b 888  "88b  888  "Y88b d88P" "Y88b        d88P  Y88b Y88b d88P  
+             .d88P 888  .88P  888    888 888     888        Y88b.       Y88o88P   
+            8888"  8888888K.  888    888 888     888         "Y888b.     Y888P    
+             "Y8b. 888  "Y88b 888    888 888     888            "Y88b.    888     
+        888    888 888    888 888    888 888     888              "888    888     
+        Y88b  d88P 888   d88P 888  .d88P Y88b. .d88P        Y88b  d88P    888     
+         "Y8888P"  8888888P"  8888888P"   "Y88888P" 88888888 "Y8888P"     888     
+"""
+
+
+
 def create_app():
     """
     Create and configure the Flask application
@@ -35,9 +50,9 @@ def create_app():
         cors_allowed_origins="*",
         ping_timeout=60,
         ping_interval=25,
-        async_mode="eventlet",      # async_mode="threading",
-        logger=False,               # Enable logging for debugging
-        engineio_logger=False,      # Enable engine.io logging
+        async_mode="eventlet",  # async_mode="threading",
+        logger=False,           # Enable logging for debugging
+        engineio_logger=False,  # Enable engine.io logging
     )
 
     # Register handlers
@@ -75,6 +90,7 @@ if __name__ == "__main__":
     # Display startup information
     print("=" * 60)
     print("🚀 Enhanced Chat Application Server")
+    print(name)
     print("=" * 60)
     print(f"📍 Local IP: {local_ip}")
     print(f"🌐 Server URL: https://{local_ip}:{port}")

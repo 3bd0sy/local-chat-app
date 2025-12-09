@@ -11,27 +11,35 @@ import { VideoCall } from "./components/VideoCall";
 import { RequestModal } from "./components/RequestModal";
 import { ToastContainer } from "./components/Toast";
 import "./styles/index.css";
+import { CallProvider } from "./contexts/CallContext";
+import { ToastProvider } from "./providers/ToastProvider";
 
 const App: React.FC = () => {
   return (
-    <ChatProvider>
-      <div className="flex h-screen overflow-hidden">
-        {/* Sidebar with users */}
-        <Sidebar />
+    <>
+      <ToastProvider>
+        <ChatProvider>
+          <CallProvider>
+            <div className="flex h-screen overflow-hidden">
+              {/* Sidebar with users */}
+              <Sidebar />
 
-        {/* Main chat area */}
-        <ChatArea />
+              {/* Main chat area */}
+              <ChatArea />
 
-        {/* Video call overlay */}
-        <VideoCall />
+              {/* Video call overlay */}
+              <VideoCall />
 
-        {/* Request modal */}
-        <RequestModal />
+              {/* Request modal */}
+              <RequestModal />
 
-        {/* Toast notifications */}
-        <ToastContainer />
-      </div>
-    </ChatProvider>
+              {/* Toast notifications */}
+              <ToastContainer />
+            </div>
+          </CallProvider>
+        </ChatProvider>
+      </ToastProvider>
+    </>
   );
 };
 
