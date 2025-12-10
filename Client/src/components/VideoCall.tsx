@@ -19,6 +19,12 @@ import {
 } from "lucide-react";
 import { useChatContext } from "../contexts/ChatContext";
 import { useCallContext } from "../contexts/CallContext";
+import {
+  toggleFullscreen as utilToggleFullscreen,
+  toggleSpeaker as utilToggleSpeaker,
+  formatDuration,
+  handleMouseMove as utilHandleMouseMove,
+} from "../utils/videoCallUtils";
 
 export const VideoCall: React.FC = () => {
   const { partnerInfo } = useChatContext();
@@ -80,37 +86,15 @@ export const VideoCall: React.FC = () => {
 
   // Handle mouse move to show controls
   const handleMouseMove = () => {
-    setShowControls(true);
+    utilHandleMouseMove(setShowControls);
   };
 
   const toggleFullscreen = () => {
-    const elem = document.getElementById("video-container");
-    if (!elem) return;
-
-    if (!document.fullscreenElement) {
-      elem.requestFullscreen().catch((err) => {
-        console.error("Error attempting to enable fullscreen:", err);
-      });
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
+    utilToggleFullscreen("video-container", isFullscreen, setIsFullscreen);
   };
 
   const toggleSpeaker = () => {
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.muted = !isSpeakerMuted;
-      setIsSpeakerMuted(!isSpeakerMuted);
-    }
-  };
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
+    utilToggleSpeaker(remoteVideoRef, isSpeakerMuted, setIsSpeakerMuted);
   };
 
   if (!isInCall) {

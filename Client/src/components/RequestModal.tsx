@@ -1,22 +1,15 @@
-import React, { useEffect, useState, useMemo } from "react";
-import {
-  MessageCircle,
-  Video,
-  Phone,
-  Check,
-  X,
-  Clock,
-  Globe,
-} from "lucide-react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { Check, X, Clock, Globe } from "lucide-react";
 import { useChatContext } from "../contexts/ChatContext";
 import { useCallContext } from "../contexts/CallContext";
-import type { CallRequest, ChatRequest } from "../types";
-
-const isCallRequest = (
-  request: ChatRequest | CallRequest
-): request is CallRequest => {
-  return "call_type" in request;
-};
+import {
+  // isCallRequest,
+  getRequestIcon,
+  getRequestColor,
+  getRequestTitle,
+  getRequestMessage,
+  getActionText,
+} from "../utils/requestHelpers";
 
 export const RequestModal: React.FC = () => {
   const { pendingChatRequest, acceptChatRequest, rejectChatRequest } =
@@ -35,21 +28,21 @@ export const RequestModal: React.FC = () => {
     return "call_type" in currentRequest ? "call" : "chat";
   }, [currentRequest]);
 
-  const handleAccept = () => {
+  const handleAccept = useCallback(() => {
     if (requestType === "call") {
       acceptCall();
     } else if (requestType === "chat") {
       acceptChatRequest();
     }
-  };
+  }, [requestType, acceptCall, acceptChatRequest]);
 
-  const handleReject = () => {
+  const handleReject = useCallback(() => {
     if (requestType === "call") {
       rejectCall();
     } else if (requestType === "chat") {
       rejectChatRequest();
     }
-  };
+  }, [requestType, rejectCall, rejectChatRequest]);
 
   useEffect(() => {
     if (currentRequest) {
@@ -92,57 +85,6 @@ export const RequestModal: React.FC = () => {
     return null;
   }
 
-  const getIcon = () => {
-    if (requestType === "call" && isCallRequest(currentRequest)) {
-      const callRequest = currentRequest as CallRequest;
-      switch (callRequest.call_type) {
-        case "video":
-          return <Video className="w-12 h-12 md:w-16 md:h-16" />;
-        case "audio":
-          return <Phone className="w-12 h-12 md:w-16 md:h-16" />;
-      }
-    }
-    return <MessageCircle className="w-12 h-12 md:w-16 md:h-16" />;
-  };
-
-  const getIconColor = () => {
-    if (requestType === "call" && isCallRequest(currentRequest)) {
-      const callRequest = currentRequest as CallRequest;
-      switch (callRequest.call_type) {
-        case "video":
-          return "from-accent-500 to-purple-500";
-        case "audio":
-          return "from-green-500 to-emerald-500";
-      }
-    }
-    return "from-primary-500 to-accent-500";
-  };
-
-  const getTitle = () => {
-    if (requestType === "call" && isCallRequest(currentRequest)) {
-      const callRequest = currentRequest as CallRequest;
-      switch (callRequest.call_type) {
-        case "video":
-          return "Incoming Video Call";
-        case "audio":
-          return "Incoming Audio Call";
-      }
-    }
-    return "Chat Request";
-  };
-
-  const getMessage = () => {
-    if (requestType === "call" && isCallRequest(currentRequest)) {
-      const callRequest = currentRequest as CallRequest;
-      return `${callRequest.from_username} wants to start a ${callRequest.call_type} call`;
-    }
-    return `${currentRequest.from_username} wants to chat with you`;
-  };
-
-  const getActionText = () => {
-    return requestType === "call" ? "Answer" : "Start Chat";
-  };
-
   return (
     <>
       <div
@@ -156,7 +98,9 @@ export const RequestModal: React.FC = () => {
           onClick={(e) => e.stopPropagation()}
         >
           <div
-            className={`absolute inset-0 bg-linear-to-r ${getIconColor()} opacity-20 blur-3xl rounded-3xl`}
+            className={`absolute inset-0 bg-linear-to-r ${getRequestColor(
+              currentRequest
+            )} opacity-20 blur-3xl rounded-3xl`}
           ></div>
 
           <div className="relative glass rounded-3xl border border-white/20 overflow-hidden shadow-2xl">
@@ -173,7 +117,9 @@ export const RequestModal: React.FC = () => {
             <div className="relative p-6 md:p-8">
               <div className="absolute top-0 left-0 right-0 h-1 bg-white/10">
                 <div
-                  className={`h-full bg-linear-to-r ${getIconColor()} transition-all duration-1000 ease-linear`}
+                  className={`h-full bg-linear-to-r ${getRequestColor(
+                    currentRequest
+                  )} transition-all duration-1000 ease-linear`}
                   style={{ width: `${(timeLeft / 30) * 100}%` }}
                 />
               </div>
@@ -189,28 +135,38 @@ export const RequestModal: React.FC = () => {
               <div className="flex justify-center mb-6">
                 <div className="relative">
                   <div
-                    className={`absolute inset-0 rounded-full bg-linear-to-r ${getIconColor()} opacity-75 animate-ping`}
+                    className={`absolute inset-0 rounded-full bg-linear-to-r ${getRequestColor(
+                      currentRequest
+                    )} opacity-75 animate-ping`}
                   ></div>
                   <div
-                    className={`absolute inset-0 rounded-full bg-linear-to-r ${getIconColor()} opacity-50 blur-xl`}
+                    className={`absolute inset-0 rounded-full bg-linear-to-r ${getRequestColor(
+                      currentRequest
+                    )} opacity-50 blur-xl`}
                   ></div>
 
                   <div
-                    className={`relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-linear-to-br ${getIconColor()} flex items-center justify-center shadow-2xl`}
+                    className={`relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-linear-to-br ${getRequestColor(
+                      currentRequest
+                    )} flex items-center justify-center shadow-2xl`}
                   >
-                    <div className="text-white">{getIcon()}</div>
+                    <div className="text-white">
+                      {getRequestIcon(currentRequest)}
+                    </div>
                   </div>
                 </div>
               </div>
 
               <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-2 bg-linear-to-r from-white to-white/80 bg-clip-text text-transparent">
-                {getTitle()}
+                {getRequestTitle(currentRequest)}
               </h2>
 
               <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
                 <div className="flex items-center gap-3 mb-3">
                   <div
-                    className={`w-12 h-12 rounded-xl bg-linear-to-br ${getIconColor()} flex items-center justify-center font-bold text-lg shadow-lg`}
+                    className={`w-12 h-12 rounded-xl bg-linear-to-br ${getRequestColor(
+                      currentRequest
+                    )} flex items-center justify-center font-bold text-lg shadow-lg`}
                   >
                     {currentRequest.from_username.charAt(0).toUpperCase()}
                   </div>
@@ -218,7 +174,9 @@ export const RequestModal: React.FC = () => {
                     <p className="font-semibold text-white text-lg truncate">
                       {currentRequest.from_username}
                     </p>
-                    <p className="text-sm text-white/50">{getMessage()}</p>
+                    <p className="text-sm text-white/50">
+                      {getRequestMessage(currentRequest)}
+                    </p>
                   </div>
                 </div>
 
@@ -252,7 +210,7 @@ export const RequestModal: React.FC = () => {
                 >
                   <div className="relative flex items-center justify-center gap-2 text-white font-semibold">
                     <Check className="w-5 h-5" />
-                    <span>{getActionText()}</span>
+                    <span>{getActionText(currentRequest)}</span>
                   </div>
                   <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                 </button>
@@ -273,7 +231,11 @@ export const RequestModal: React.FC = () => {
               </div>
             </div>
 
-            <div className={`h-1 bg-linear-to-r ${getIconColor()}`}></div>
+            <div
+              className={`h-1 bg-linear-to-r ${getRequestColor(
+                currentRequest
+              )}`}
+            ></div>
           </div>
         </div>
       </div>

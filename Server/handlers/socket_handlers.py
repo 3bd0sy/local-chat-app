@@ -71,7 +71,9 @@ def register_socket_handlers(app, socketio: SocketIO):
                 existing_user = user_info
                 break
 
+        if existing_user:
             del connected_users[existing_user["sid"]]
+
         transport = request.environ.get("HTTP_UPGRADE", "polling").lower()
 
         logger.info(f"New connection: {request.sid} via {transport} from {client_ip}")

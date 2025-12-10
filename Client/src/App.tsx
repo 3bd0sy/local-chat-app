@@ -5,8 +5,8 @@
 
 import React from "react";
 import { ChatProvider } from "./contexts/ChatContext";
-import { Sidebar } from "./components/Sidebar";
-import { ChatArea } from "./components/ChatArea";
+import Sidebar from "./components/sidebar/Sidebar";
+import Chat from "./components/chat/Chat";
 import { VideoCall } from "./components/VideoCall";
 import { RequestModal } from "./components/RequestModal";
 import { ToastContainer } from "./components/Toast";
@@ -25,7 +25,7 @@ const App: React.FC = () => {
               <Sidebar />
 
               {/* Main chat area */}
-              <ChatArea />
+              <Chat />
 
               {/* Video call overlay */}
               <VideoCall />
