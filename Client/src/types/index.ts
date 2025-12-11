@@ -7,7 +7,7 @@ export interface UserInfo {
   sid: string;
   ip: string;
   username: string;
-  status: "online" | "busy" | "offline" | "in_call";
+  status: UserStatus;
   in_call?: boolean;
 }
 
@@ -19,6 +19,15 @@ export interface Message {
   message: string;
   timestamp: string;
   type: "sent" | "received";
+  fileData?: {
+    fileId: string;
+    fileName: string;
+    fileSize: number;
+    fileType: string;
+    fileCategory?: string;
+    fileIcon?: string;
+    downloadUrl: string;
+  };
 }
 
 // Call types
@@ -68,6 +77,21 @@ export interface SocketEventPayloads {
   // Chat events
   incoming_chat_request: ChatRequest;
   send_chat_request: { target_sid: string };
+
+  // chat events
+  file_received: {
+    fileId: string;
+    fileName: string;
+    originalName?: string;
+    fileSize: number;
+    fileType: string;
+    fileCategory?: string;
+    fileIcon?: string;
+    downloadUrl: string;
+    timestamp?: string;
+    from_sid?: string;
+  };
+
   chat_request_accepted: {
     room_id: string;
     partner_sid: string;
@@ -94,11 +118,11 @@ export interface SocketEventPayloads {
     message: string;
     timestamp: string;
   };
-  partner_left_chat: { username: string };
+  partner_left_chat: PartnerLeftData;
   leave_chat: { room_id: string };
 
   // Call events
-  incoming_call: ChatRequest;
+  incoming_call: CallRequest;
   start_call: {
     target_sid: string;
     call_type: CallType;
@@ -123,17 +147,17 @@ export interface SocketEventPayloads {
   webrtc_offer: {
     target_sid: string;
     offer: RTCSessionDescriptionInit;
-    from_sid?: string;
+    from_sid: string;
   };
   webrtc_answer: {
     target_sid: string;
     answer: RTCSessionDescriptionInit;
-    from_sid?: string;
+    from_sid: string;
   };
   webrtc_ice_candidate: {
     target_sid: string;
     candidate: RTCIceCandidateInit;
-    from_sid?: string;
+    from_sid: string;
   };
   webrtc_call_ended: Record<string, never>;
 }
@@ -195,23 +219,6 @@ declare global {
 
 // User Types
 export type UserStatus = "online" | "offline" | "busy" | "in_call";
-
-export interface UserInfo {
-  sid: string;
-  ip: string;
-  username: string;
-  status: UserStatus;
-}
-
-// Message Types
-export interface Message {
-  id: string;
-  from_sid: string;
-  from_username: string;
-  message: string;
-  timestamp: string;
-  type: "sent" | "received";
-}
 
 // Request Types
 export type RequestType = "chat" | "call";
