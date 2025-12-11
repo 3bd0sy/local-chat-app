@@ -1,7 +1,11 @@
 import { useEffect, useRef } from "react";
 import { socketService } from "../services/socketService";
-// import type { SocketEventPayloads } from "../types";
-export const useSocketEvents = (handlers: any) => {
+import { SocketEventPayloads, SocketEvent } from "../types";
+export const useSocketEvents = (
+  handlers: Partial<{
+    [K in SocketEvent]: (data: SocketEventPayloads[K]) => void;
+  }>
+) => {
   const cleanupRef = useRef<(() => void)[]>([]);
   const isCleaningRef = useRef(false);
 
@@ -19,19 +23,10 @@ export const useSocketEvents = (handlers: any) => {
 
     Object.entries(handlers).forEach(([event, handler]) => {
       if (handler && typeof handler === "function") {
-        const cleanup = socketService.on(event, handler);
+        const cleanup = socketService.on(event as SocketEvent, handler as any);
         cleanupRef.current.push(cleanup);
       }
     });
-    // (Object.keys(handlers) as Array<keyof SocketEventPayloads>).forEach(
-    //   (event) => {
-    //     const handler = handlers[event];
-    //     if (handler && typeof handler === "function") {
-    //       const cleanup = socketService.on(event, handler);
-    //       cleanupRef.current.push(cleanup);
-    //     }
-    //   }
-    // );
 
     return () => {
       isCleaningRef.current = true;
