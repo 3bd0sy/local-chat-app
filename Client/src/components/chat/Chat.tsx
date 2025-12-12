@@ -9,6 +9,7 @@ import MessageInput from "./MessageInput";
 
 import EmptyState from "./EmptyState";
 import { useChatActions } from "../../hooks/useChatActions";
+import UploadProgress from "./UploadProgress";
 
 const Chat = () => {
   const { partnerInfo, messages, leaveChat, currentRoom } = useChatContext();
@@ -17,11 +18,12 @@ const Chat = () => {
     messageInput,
     setMessageInput,
     selectedFile,
-    isUploading,
+    uploads,
     handleSend,
     handleFileSelect,
     fileInputRef,
     removeSelectedFile,
+    cancelUpload,
   } = useChatActions();
 
   // Handle Enter key
@@ -42,6 +44,8 @@ const Chat = () => {
         <MessageList messages={messages} partnerInfo={partnerInfo} />
 
         <div className="glass border-t border-white/10">
+          <UploadProgress uploads={uploads} onCancel={cancelUpload} />
+
           {selectedFile && (
             <FilePreview file={selectedFile} onRemove={removeSelectedFile} />
           )}
@@ -52,7 +56,7 @@ const Chat = () => {
             handleKeyPress={handleKeyPress}
             handleSend={handleSend}
             selectedFile={selectedFile}
-            isUploading={isUploading}
+            isUploading={uploads.length > 0}
             handleFileSelect={handleFileSelect}
             fileInputRef={fileInputRef}
           />

@@ -4,6 +4,7 @@
 
 import { Download } from "lucide-react";
 import { Message } from "../../types";
+import FileMessage from "./FileMessage";
 
 interface MessageBubbleProps {
   message: Message;
@@ -29,9 +30,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           } p-3.5 shadow-lg transition-all hover:shadow-xl`}
         >
           {/* Message Content */}
-          <p className="text-sm leading-relaxed text-white break-break-word">
-            {message.message}
-          </p>
+          {message.fileData ? (
+            <FileMessage fileData={message.fileData} type={message.type} />
+          ) : (
+            <p className="text-sm leading-relaxed text-white break-break-word">
+              {message.message}
+            </p>
+          )}
 
           {/* File Indicator (if applicable) */}
           {isFile && (

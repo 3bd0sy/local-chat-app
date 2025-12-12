@@ -46,7 +46,7 @@ class SocketService {
       });
 
       this.socket.on("connect_error", (error) => {
-        console.error("❌ Connection error:", error.message);
+        console.error(" Connection error:", error.message);
         reject(error);
         this.connectionPromise = null;
       });
@@ -76,7 +76,7 @@ class SocketService {
     const handlers = this.eventHandlers.get(event) || [];
 
     if (handlers.includes(handler)) {
-      console.warn(`⚠️ Handler already registered for event: ${event}`);
+      console.warn(` Handler already registered for event: ${event}`);
       return () => this.off(event, handler);
     }
 
@@ -122,21 +122,21 @@ class SocketService {
     return new Promise(async (resolve, reject) => {
       if (!this.socket || !this.isConnected) {
         console.warn(
-          `⚠️ Socket not connected for event: ${event}, attempting to reconnect...`
+          ` Socket not connected for event: ${event}, attempting to reconnect...`
         );
 
         try {
           await this.connect();
         } catch (err) {
           const error = `Cannot emit ${event}: Socket not connected`;
-          console.warn(`⚠️ ${error}`);
+          console.warn(` ${error}`);
           reject(new Error(error));
           return;
         }
       }
       if (!this.socket || !this.isConnected) {
         const error = `Cannot emit ${event}: Socket still not connected`;
-        console.error(`❌ ${error}`);
+        console.error(` ${error}`);
         reject(new Error(error));
         return;
       }
@@ -157,7 +157,7 @@ class SocketService {
           emitData.from_sid = socketId;
         } else {
           console.warn(
-            `⚠️ Cannot get socket ID for event: ${event}, sending without from_sid`
+            ` Cannot get socket ID for event: ${event}, sending without from_sid`
           );
         }
       }
@@ -177,7 +177,7 @@ class SocketService {
           resolve(undefined);
         }
       } catch (error) {
-        console.error(`❌ Error emitting ${event}:`, error);
+        console.error(` Error emitting ${event}:`, error);
         if (
           event === "webrtc_offer" ||
           event === "webrtc_answer" ||

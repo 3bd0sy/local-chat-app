@@ -4,9 +4,10 @@ Main application entry point
 """
 
 import eventlet
-import eventlet.wsgi
-
 eventlet.monkey_patch()
+
+import eventlet.wsgi
+from flask_cors import CORS
 
 # Disable bytecode generation to prevent cluttering the filesystem with .pyc files
 import sys
@@ -18,10 +19,9 @@ from flask import Flask
 from flask_socketio import SocketIO
 from config.settings import Config
 from handlers.http_handlers import register_http_handlers
+from handlers.file_handler import register_file_handlers
 from handlers.socket_handlers import register_socket_handlers
 from services.network_service import get_local_ip
-
-
 
 
 name = """
@@ -36,7 +36,6 @@ name = """
 """
 
 
-
 def create_app():
     """
     Create and configure the Flask application
@@ -44,20 +43,37 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+
+    CORS(app, resources={
+        r"/*": {
+            "origins": "*",  # ["https://173.10.10.245:5173"]
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "expose_headers": ["Content-Range", "X-Content-Range"],
+            "supports_credentials": True,
+            "max_age": 3600
+        }
+    })
+
+    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    os.makedirs(app.config["COMPLETED_FOLDER"], exist_ok=True)
+
     # Initialize SocketIO
     socketio = SocketIO(
         app,
         cors_allowed_origins="*",
-        ping_timeout=60,
+        max_http_buffer_size=100 * 1024 * 1024,  # 100 MB buffer  chunks
+        ping_timeout=120,
         ping_interval=25,
         async_mode="eventlet",  # async_mode="threading",
-        logger=False,           # Enable logging for debugging
+        logger=False,  # Enable logging for debugging
         engineio_logger=False,  # Enable engine.io logging
     )
 
     # Register handlers
     register_http_handlers(app)
     register_socket_handlers(app, socketio)
+    register_file_handlers(app, socketio)
 
     return app, socketio
 
@@ -70,14 +86,14 @@ if __name__ == "__main__":
 
     print("🔍 Checking SSL certificates...")
     if not os.path.exists(cert_path):
-        print(f"❌ Certificate file not found: {cert_path}")
+        print(f" Certificate file not found: {cert_path}")
         print("   Please check the path or generate certificates with mkcert")
         exit(1)
     else:
         print(f" Certificate file found: {cert_path}")
 
     if not os.path.exists(key_path):
-        print(f"❌ Key file not found: {key_path}")
+        print(f" Key file not found: {key_path}")
         print("   Please check the path or generate certificates with mkcert")
         exit(1)
     else:
@@ -125,20 +141,20 @@ if __name__ == "__main__":
 
     except PermissionError:
         print(
-            "❌ Permission denied! Please run as administrator or use a different port"
+            " Permission denied! Please run as administrator or use a different port"
         )
         print(
             f"   Try: sudo python app.py (Linux/Mac) or Run as Administrator (Windows)"
         )
     except OSError as e:
-        print(f"❌ OS Error: {e}")
+        print(f" OS Error: {e}")
         print("   Possible causes:")
         print("   1. Port 5000 is already in use")
         print("   2. Firewall blocking the port")
         print("   3. IP address not available")
         print("   Solution: Try changing port or IP address")
     except Exception as e:
-        print(f"❌ Unexpected error: {type(e).__name__}: {e}")
+        print(f" Unexpected error: {type(e).__name__}: {e}")
         import traceback
 
         traceback.print_exc()

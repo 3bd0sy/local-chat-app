@@ -27,6 +27,9 @@ import {
 } from "../types";
 
 interface ChatContextType extends ChatState {
+  // Socket service
+  socketService: typeof socketService;
+
   // User management
   setUsername: (username: string) => void;
 
@@ -35,6 +38,7 @@ interface ChatContextType extends ChatState {
   acceptChatRequest: () => void;
   rejectChatRequest: () => void;
   sendMessage: (message: string) => void;
+  addMessage: (message: Message) => void;
   leaveChat: () => void;
 
   // Connection
@@ -140,14 +144,13 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       });
 
       // Request online users list
-      // socketService.emit("get_online_users");
       setTimeout(() => {
         if (socketService.isConnectedState()) {
           socketService.emit("get_online_users").catch((error) => {
-            console.warn("⚠️ Failed to get online users:", error);
+            console.warn(" Failed to get online users:", error);
           });
         } else {
-          console.warn("⚠️ Socket not connected, delaying get_online_users");
+          console.warn(" Socket not connected, delaying get_online_users");
           setTimeout(() => {
             if (socketService.isConnectedState()) {
               socketService.emit("get_online_users").catch(() => {});
@@ -272,7 +275,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   const handlePartnerLeftChat = useCallback(
     (data: PartnerLeftData) => {
-
       showToast("Chat Ended", `${data.username} left the chat`, "warning");
       handleLeaveChat();
     },
@@ -366,7 +368,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       return;
     }
 
-
     socketService.emit("accept_chat_request", {
       request_id: request.request_id,
     });
@@ -406,7 +407,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         return;
       }
 
-
       const timestamp = new Date().toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
@@ -419,7 +419,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
           timestamp,
         })
         .catch((error) => {
-          console.error("❌ Failed to send message:", error);
+          console.error(" Failed to send message:", error);
           showToast("Error", "Failed to send message", "error");
         });
 
@@ -437,12 +437,16 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     [myInfo, showToast]
   );
 
+  const addMessage = useCallback((message: Message) => {
+    setMessages((prev) => [...prev, message]);
+  }, []);
+
   const leaveChat = useCallback(() => {
     const room = currentRoomRef.current;
 
     if (room) {
       socketService.emit("leave_chat", { room_id: room }).catch((error) => {
-        console.warn("⚠️ Failed to emit leave_chat:", error);
+        console.warn(" Failed to emit leave_chat:", error);
       });
     }
 
@@ -462,11 +466,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       try {
         await socketService.connect();
       } catch (error) {
-        console.error("❌ Failed to auto-connect:", error);
+        console.error(" Failed to auto-connect:", error);
 
         setTimeout(() => {
           socketService.connect().catch(() => {
-            console.warn("⚠️ Second connection attempt failed");
+            console.warn(" Second connection attempt failed");
           });
         }, 3000);
       }
@@ -479,7 +483,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     };
   }, []);
 
-
   // Provide context value
   const value: ChatContextType = {
     myInfo,
@@ -490,11 +493,13 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     pendingChatRequest,
     messages,
     connected,
+    socketService,
     setUsername,
     sendChatRequest,
     acceptChatRequest,
     rejectChatRequest,
     sendMessage,
+    addMessage,
     leaveChat,
     disconnect,
   };

@@ -118,7 +118,7 @@ export class WebRTCService {
       await this.peerConnection.setLocalDescription(answer);
       return answer;
     } catch (error) {
-      console.error("⚠️ Error handling offer:", error);
+      console.error(" Error handling offer:", error);
       throw error;
     }
   }
@@ -136,7 +136,7 @@ export class WebRTCService {
       this.isRemoteDescriptionSet = true;
       await this.processPendingIceCandidates();
     } catch (error) {
-      console.error("⚠️ Error handling answer:", error);
+      console.error(" Error handling answer:", error);
       throw error;
     }
   }
@@ -159,7 +159,7 @@ export class WebRTCService {
         );
         successCount++;
       } catch (error) {
-        console.warn("⚠️ Failed to process pending ICE candidate:", error);
+        console.warn(" Failed to process pending ICE candidate:", error);
         failCount++;
         this.pendingIceCandidates.push(candidate);
       }

@@ -72,7 +72,6 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
   const isInitializingRef = useRef(false);
   const callTypeRef = useRef<CallType | null>(null);
 
-
   // Update refs when state changes
   useEffect(() => {
     pendingCallRequestRef.current = pendingCallRequest;
@@ -113,14 +112,14 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
 
   const endCall = useCallback(() => {
     if (!isInCall && !webrtcInitializedRef.current && !currentRoomRef.current) {
-      console.log("⚠️ Already cleaned up, skipping");
+      console.log(" Already cleaned up, skipping");
       return;
     }
 
     try {
       webrtcService.cleanup();
     } catch (err) {
-      console.warn("⚠️ WebRTC cleanup error:", err);
+      console.warn(" WebRTC cleanup error:", err);
     }
 
     webrtcInitializedRef.current = false;
@@ -134,7 +133,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
         .emit("end_call", {
           room_id: roomToEnd,
         })
-        .catch((err) => console.warn("⚠️ Failed to emit end_call:", err));
+        .catch((err) => console.warn(" Failed to emit end_call:", err));
     }
 
     setIsInCall(false);
@@ -181,7 +180,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
       roomId?: string
     ) => {
       if (isInitializingRef.current || webrtcInitializedRef.current) {
-        console.log("⚠️ WebRTC initialization already in progress");
+        console.log(" WebRTC initialization already in progress");
         return;
       }
 
@@ -222,7 +221,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
           try {
             pc.addTrack(track, stream);
           } catch (error) {
-            console.error("❌ Error adding track:", error);
+            console.error(" Error adding track:", error);
           }
         });
 
@@ -238,7 +237,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
 
         webrtcInitializedRef.current = true;
       } catch (error) {
-        console.error("❌ Error in initializeWebRTC:", error);
+        console.error(" Error in initializeWebRTC:", error);
         showToast("Error", "Failed to start call", "error");
         endCall();
       } finally {
@@ -274,7 +273,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
       call_type: CallType;
     }) => {
       if (isInCall) {
-        console.log("⚠️ Already in call, ignoring");
+        console.log(" Already in call, ignoring");
         return;
       }
 
@@ -320,7 +319,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
             try {
               pc.addTrack(track, stream);
             } catch (error) {
-              console.error("❌ Error adding track:", error);
+              console.error(" Error adding track:", error);
             }
           });
 
@@ -338,9 +337,9 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
           from_sid: socketId || "",
         });
 
-        console.log("✅ Answer sent successfully");
+        console.log("Answer sent successfully");
       } catch (error) {
-        console.error("❌ Error handling offer:", error);
+        console.error(" Error handling offer:", error);
         showToast("Error", "Failed to process call request", "error");
       }
     },
@@ -352,7 +351,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
       try {
         await webrtcService.handleAnswer(data.answer);
       } catch (error) {
-        console.error("❌ Error handling answer:", error);
+        console.error(" Error handling answer:", error);
       }
     },
     []
@@ -368,7 +367,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
 
         await webrtcService.addIceCandidate(data.candidate);
       } catch (error) {
-        console.warn("⚠️ Failed to add ICE candidate:", error);
+        console.warn(" Failed to add ICE candidate:", error);
       }
     },
     []
@@ -393,7 +392,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
         !webrtcInitializedRef.current &&
         !currentRoomRef.current
       ) {
-        console.log("⚠️ Call already ended, ignoring end event");
+        console.log(" Call already ended, ignoring end event");
         return;
       }
 

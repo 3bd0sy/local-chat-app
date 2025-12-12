@@ -1,8 +1,9 @@
-import { Paperclip, Send, Video } from "lucide-react";
-
 /**
  * Empty State Component
  */
+
+import { Paperclip, Send, Video } from "lucide-react";
+
 const EmptyState: React.FC = () => (
   <div className="flex-1 flex items-center justify-center p-8">
     <div className="text-center max-w-md">
