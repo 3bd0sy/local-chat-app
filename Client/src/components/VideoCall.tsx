@@ -265,119 +265,96 @@ export const VideoCall: React.FC = () => {
       </div>
 
       <div
-        className={`relative bg-linear-to-t from-black/80 via-black/50 to-transparent backdrop-blur-xl border-t border-white/10 transition-all duration-300 ${
+        className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 transition-all duration-300 ${
           showControls
             ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-full pointer-events-none"
+            : "opacity-0 translate-y-10 pointer-events-none"
         }`}
       >
-        <div className="p-4 md:p-6">
-          <div className="max-w-2xl mx-auto flex items-center justify-center gap-2 md:gap-4">
+        <div className="bg-black/30 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl p-3 md:p-4">
+          <div className="flex items-center justify-center gap-2 md:gap-3">
             {/* Microphone Toggle */}
             <button
               onClick={toggleMute}
-              className={`relative group flex flex-col items-center gap-1 md:gap-2 transition-all ${
-                isMuted ? "text-red-400" : "text-white hover:text-primary-300"
+              className={`relative p-3 md:p-4 rounded-full transition-all ${
+                isMuted
+                  ? "bg-red-500/80 shadow-lg shadow-red-500/30"
+                  : "bg-white/10 hover:bg-white/20"
               }`}
               title={isMuted ? "Unmute" : "Mute"}
             >
-              <div
-                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all ${
-                  isMuted
-                    ? "bg-red-500 shadow-lg shadow-red-500/50"
-                    : "bg-white/10 hover:bg-white/20 border border-white/20"
-                }`}
-              >
-                {isMuted ? (
-                  <MicOff className="w-5 h-5 md:w-6 md:h-6" />
-                ) : (
-                  <Mic className="w-5 h-5 md:w-6 md:h-6" />
-                )}
-              </div>
-              <span className="text-xs hidden md:block">
-                {isMuted ? "Unmute" : "Mute"}
-              </span>
+              {isMuted ? (
+                <MicOff className="w-5 h-5 md:w-6 md:h-6" />
+              ) : (
+                <Mic className="w-5 h-5 md:w-6 md:h-6" />
+              )}
             </button>
 
             {/* Video Toggle (only for video calls) */}
             {callType === "video" && (
               <button
                 onClick={toggleVideo}
-                className={`relative group flex flex-col items-center gap-1 md:gap-2 transition-all ${
+                className={`relative p-3 md:p-4 rounded-full transition-all ${
                   isVideoOff
-                    ? "text-red-400"
-                    : "text-white hover:text-primary-300"
+                    ? "bg-red-500/80 shadow-lg shadow-red-500/30"
+                    : "bg-white/10 hover:bg-white/20"
                 }`}
                 title={isVideoOff ? "Turn on camera" : "Turn off camera"}
               >
-                <div
-                  className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all ${
-                    isVideoOff
-                      ? "bg-red-500 shadow-lg shadow-red-500/50"
-                      : "bg-white/10 hover:bg-white/20 border border-white/20"
-                  }`}
-                >
-                  {isVideoOff ? (
-                    <VideoOff className="w-5 h-5 md:w-6 md:h-6" />
-                  ) : (
-                    <Video className="w-5 h-5 md:w-6 md:h-6" />
-                  )}
-                </div>
-                <span className="text-xs hidden md:block">
-                  {isVideoOff ? "Camera" : "Camera"}
-                </span>
+                {isVideoOff ? (
+                  <VideoOff className="w-5 h-5 md:w-6 md:h-6" />
+                ) : (
+                  <Video className="w-5 h-5 md:w-6 md:h-6" />
+                )}
               </button>
             )}
 
             {/* End Call Button */}
             <button
               onClick={endCall}
-              className="relative group flex flex-col items-center gap-1 md:gap-2"
+              className="relative p-3 md:p-4 rounded-full bg-red-500/80 hover:bg-red-600/80 shadow-lg shadow-red-500/30 transition-all hover:scale-110 active:scale-95"
               title="End call"
             >
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 flex items-center justify-center shadow-2xl shadow-red-500/50 transition-all hover:scale-110 active:scale-95">
-                <PhoneOff className="w-6 h-6 md:w-7 md:h-7" />
-              </div>
-              <span className="text-xs hidden md:block text-red-400">
-                End Call
-              </span>
+              <PhoneOff className="w-5 h-5 md:w-6 md:h-6" />
             </button>
 
             {/* Speaker Toggle */}
             <button
               onClick={toggleSpeaker}
-              className={`relative group flex flex-col items-center gap-1 md:gap-2 transition-all ${
+              className={`relative p-3 md:p-4 rounded-full transition-all ${
                 isSpeakerMuted
-                  ? "text-red-400"
-                  : "text-white hover:text-primary-300"
+                  ? "bg-red-500/80 shadow-lg shadow-red-500/30"
+                  : "bg-white/10 hover:bg-white/20"
               }`}
               title={isSpeakerMuted ? "Unmute speaker" : "Mute speaker"}
             >
-              <div
-                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all ${
-                  isSpeakerMuted
-                    ? "bg-red-500 shadow-lg shadow-red-500/50"
-                    : "bg-white/10 hover:bg-white/20 border border-white/20"
-                }`}
-              >
-                {isSpeakerMuted ? (
-                  <VolumeX className="w-5 h-5 md:w-6 md:h-6" />
-                ) : (
-                  <Volume2 className="w-5 h-5 md:w-6 md:h-6" />
-                )}
-              </div>
-              <span className="text-xs hidden md:block">
-                {isSpeakerMuted ? "Speaker" : "Speaker"}
-              </span>
+              {isSpeakerMuted ? (
+                <VolumeX className="w-5 h-5 md:w-6 md:h-6" />
+              ) : (
+                <Volume2 className="w-5 h-5 md:w-6 md:h-6" />
+              )}
+            </button>
+
+            {/* Fullscreen Toggle */}
+            <button
+              onClick={toggleFullscreen}
+              className="relative p-3 md:p-4 rounded-full bg-white/10 hover:bg-white/20 transition-all"
+              title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            >
+              {isFullscreen ? (
+                <Minimize2 className="w-5 h-5 md:w-6 md:h-6" />
+              ) : (
+                <Maximize2 className="w-5 h-5 md:w-6 md:h-6" />
+              )}
             </button>
           </div>
+        </div>
 
-          {/* Mobile hint */}
-          <div className="mt-4 text-center md:hidden">
-            <p className="text-xs text-white/40">
-              Tap screen to show/hide controls
-            </p>
-          </div>
+        {/* Mobile hint */}
+        <div className="mt-2 text-center">
+          <p className="text-xs text-white/60">
+            Tap screen to show/hide controls
+          </p>
         </div>
       </div>
 
