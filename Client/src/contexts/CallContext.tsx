@@ -12,6 +12,7 @@ import { socketService } from "../services/socketService";
 import { webrtcService } from "../services/webrtcService";
 import { useSocketEvents } from "../hooks/useSocketEvents";
 import type { CallType, CallRequest } from "../types";
+import { sounds } from "../utils/soundManager";
 
 interface CallContextType {
   isInCall: boolean;
@@ -97,19 +98,6 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
     };
   }, []);
 
-  // Helper function to play notification sound
-  const playNotificationSound = useCallback(() => {
-    try {
-      const audio = new Audio(
-        "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZQQ0PVqvn77BdGAg+ltryxnMpBSuBzvLZiTYIG2m98OWhUBELTKXh8bllHAU2kdb0z3kxBSh+zPLaizsKGGS56+yfSQ4NUqrn8bVnGw=="
-      );
-      audio.volume = 0.3;
-      audio.play().catch(() => {});
-    } catch (error) {
-      console.log("Notification sound unavailable");
-    }
-  }, []);
-
   const endCall = useCallback(() => {
     if (!isInCall && !webrtcInitializedRef.current && !currentRoomRef.current) {
       console.log(" Already cleaned up, skipping");
@@ -167,9 +155,11 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
         `${data.from_username} wants to ${callTypeText}`,
         "info"
       );
-      playNotificationSound();
+      // play sound when calling
+      sounds.callRinging.currentTime = 0;
+      sounds.callRinging.play();
     },
-    [showToast, playNotificationSound]
+    [showToast]
   );
 
   const initializeWebRTC = useCallback(
@@ -361,7 +351,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
     async (data: { from_sid: string; candidate: RTCIceCandidateInit }) => {
       try {
         if (!webrtcInitializedRef.current) {
-          console.log("⏳ Queueing ICE candidate (WebRTC not initialized)");
+          console.log("Queueing ICE candidate (WebRTC not initialized)");
           return;
         }
 
@@ -380,6 +370,8 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
         `${data.by_username} rejected the call`,
         "warning"
       );
+      sounds.callRinging.pause();
+      sounds.callRinging.currentTime = 0;
       setPendingCallRequest(null);
     },
     [showToast]
@@ -439,6 +431,11 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
       request_id: request.request_id,
     });
 
+    if (sounds.callRinging) {
+      sounds.callRinging.pause();
+      sounds.callRinging.currentTime = 0;
+    }
+
     setPendingCallRequest(null);
     showToast("Call Accepted", "Connecting...", "success");
   }, [showToast]);
@@ -454,7 +451,13 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
       request_id: request.request_id,
     });
 
+    if (sounds.callRinging) {
+      sounds.callRinging.pause();
+      sounds.callRinging.currentTime = 0;
+    }
+
     setPendingCallRequest(null);
+    showToast("Call Rejected", "You rejected the call", "warning");
   }, [showToast]);
 
   const toggleMute = useCallback(() => {

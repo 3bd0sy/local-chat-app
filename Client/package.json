@@ -10,7 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
     "@tailwindcss/vite": "^4.1.17",
+    "emoji-mart": "^5.6.0",
+    "howler": "^2.2.4",
     "lucide-react": "^0.555.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -18,6 +22,7 @@
     "tailwindcss": "^4.1.17"
   },
   "devDependencies": {
+    "@types/howler": "^2.2.12",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

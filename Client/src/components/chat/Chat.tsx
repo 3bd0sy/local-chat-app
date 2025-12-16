@@ -38,7 +38,7 @@ const Chat = () => {
   if (!currentRoom || !partnerInfo) return <EmptyState />;
   return (
     <>
-      <div className="flex-1 flex flex-col h-screen">
+      <div className="flex-1 flex flex-col h-screen w-full">
         <ChatHeader partnerInfo={partnerInfo} leaveChat={leaveChat} />
 
         <MessageList messages={messages} partnerInfo={partnerInfo} />

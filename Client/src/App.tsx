@@ -20,7 +20,7 @@ const App: React.FC = () => {
       <ToastProvider>
         <ChatProvider>
           <CallProvider>
-            <div className="flex h-screen overflow-hidden">
+            <div className="flex h-screen overflow-hidden w-screen">
               {/* Sidebar with users */}
               <Sidebar />
 

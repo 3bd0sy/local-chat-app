@@ -1,5 +1,7 @@
 import React from "react";
 import { Paperclip, Smile, Send, Loader2 } from "lucide-react";
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
 
 interface MessageInputProps {
   messageInput: string;
@@ -22,9 +24,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
   handleFileSelect,
   fileInputRef,
 }) => {
+  // controls emoji list
+  const [showEmojiPicker, setShowEmojiPicker] = React.useState(false);
+
   return (
     <div className="p-4">
-      <div className="flex items-end gap-2">
+      <div className="flex items-center gap-2">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -45,10 +50,24 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
         {/* Text area */}
         <div className="flex-1 relative">
+          {/* emoji picker */}
+          {showEmojiPicker && (
+            <div className="absolute bottom-14 right-0 z-50">
+              <Picker
+                onEmojiSelect={(emoji: any) => {
+                  // insert emoji into messageInput
+                  setMessageInput(messageInput + emoji.native); // add selected emoji
+                  setShowEmojiPicker(false); // close picker after selection
+                }}
+                theme="dark" // dark mode for consistency
+              />
+            </div>
+          )}
+
           <textarea
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             placeholder="Type your message..."
             rows={1}
             className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary-500/30 focus:bg-white/10 text-white placeholder-white/40 resize-none outline-none transition-all"
@@ -56,6 +75,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           />
 
           <button
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             className="absolute right-3 bottom-3 p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
             title="Add emoji"
           >
@@ -82,7 +102,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <p className="text-xs text-white/30">
           Press Enter to send, Shift + Enter for new line
         </p>
-        <p className="text-xs text-white/30">Max file size: 10MB</p>
+        <p className="text-xs text-white/30">Max file size: 50 GB</p>
       </div>
     </div>
   );

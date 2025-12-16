@@ -5,8 +5,8 @@
 import { Paperclip, Send, Video } from "lucide-react";
 
 const EmptyState: React.FC = () => (
-  <div className="flex-1 flex items-center justify-center p-8">
-    <div className="text-center max-w-md">
+  <div className="flex-1 flex items-center justify-center p-8 w-full">
+    <div className="text-center">
       {/* Animated Icon */}
       <div className="relative inline-block mb-6">
         <div className="absolute inset-0 bg-linear-to-r from-primary-500/20 to-accent-500/20 rounded-full blur-2xl animate-pulse"></div>
