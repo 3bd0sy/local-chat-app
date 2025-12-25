@@ -30,6 +30,7 @@ interface CallContextType {
   endCall: () => void;
   toggleMute: () => void;
   toggleVideo: () => void;
+  switchCamera: () => Promise<void>;
 
   // Streams
   localStream: MediaStream | null;
@@ -72,6 +73,110 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
   const webrtcInitializedRef = useRef(false);
   const isInitializingRef = useRef(false);
   const callTypeRef = useRef<CallType | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const handleStreamChange = useCallback(
+    async (newStream: MediaStream) => {
+      try {
+        // Stop all tracks of the old stream
+        if (localStreamRef.current) {
+          localStreamRef.current.getTracks().forEach((track) => {
+            track.stop();
+          });
+        }
+
+        // Update local stream state
+        setLocalStream(newStream);
+
+        // Update peer connection with new video track
+        const videoTrack = newStream.getVideoTracks()[0];
+        const pc = webrtcService.getPeerConnection();
+
+        if (pc && videoTrack) {
+          // Find the video sender
+          const senders = pc.getSenders();
+          const videoSender = senders.find(
+            (sender) => sender.track?.kind === "video"
+          );
+
+          if (videoSender) {
+            await videoSender.replaceTrack(videoTrack);
+          } else {
+            // If no video sender exists, add the track
+            pc.addTrack(videoTrack, newStream);
+          }
+        } else {
+          console.log("⚠️ No peer connection or video track", {
+            hasPeerConnection: !!pc,
+            hasVideoTrack: !!videoTrack,
+          });
+        }
+        // Update local stream in webrtcService observers
+        webrtcService.updateLocalStream(newStream);
+      } catch (error) {
+        showToast("Error", "Failed to switch camera", "error");
+      }
+    },
+    [showToast]
+  );
+
+  const switchCamera = useCallback(async () => {
+    try {
+      if (!localStreamRef.current) {
+        showToast("Error", "No active video stream", "error");
+        return;
+      }
+
+      // Get current video track
+      const currentVideoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (!currentVideoTrack) {
+        showToast("Error", "No video track found", "error");
+        return;
+      }
+
+      // Get all video devices
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(
+        (device) => device.kind === "videoinput"
+      );
+
+      if (videoDevices.length < 2) {
+        showToast("Info", "Only one camera available", "info");
+        return;
+      }
+
+      // Get current device ID
+      const currentDeviceId = currentVideoTrack.getSettings().deviceId;
+
+      // Find next camera
+      const currentIndex = videoDevices.findIndex(
+        (device) => device.deviceId === currentDeviceId
+      );
+
+      const nextIndex = (currentIndex + 1) % videoDevices.length;
+      const nextDevice = videoDevices[nextIndex];
+
+      // Stop current video track
+      currentVideoTrack.stop();
+
+      // Get new stream with selected camera
+      const constraints: MediaStreamConstraints = {
+        video: {
+          deviceId: { exact: nextDevice.deviceId },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: true,
+      };
+
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Handle the stream change
+      await handleStreamChange(newStream);
+
+      showToast("Success", "Camera switched", "success");
+    } catch (error) {
+      showToast("Error", "Failed to switch camera", "error");
+    }
+  }, [handleStreamChange, showToast]);
 
   // Update refs when state changes
   useEffect(() => {
@@ -79,8 +184,32 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
     currentRoomRef.current = currentRoom;
     partnerSidRef.current = partnerSid;
     callTypeRef.current = callType;
-  }, [pendingCallRequest, currentRoom, partnerSid, callType]);
+    localStreamRef.current = localStream;
+  }, [
+    pendingCallRequest,
+    currentRoom,
+    partnerSid,
+    callType,
+    localStream,
+    isInCall,
+  ]);
+  const isInCallRef = useRef(false);
 
+  useEffect(() => {
+    pendingCallRequestRef.current = pendingCallRequest;
+    currentRoomRef.current = currentRoom;
+    partnerSidRef.current = partnerSid;
+    callTypeRef.current = callType;
+    localStreamRef.current = localStream;
+    isInCallRef.current = isInCall;
+  }, [
+    pendingCallRequest,
+    currentRoom,
+    partnerSid,
+    callType,
+    localStream,
+    isInCall,
+  ]);
   // Subscribe to stream updates
   useEffect(() => {
     const unsubscribeLocal = webrtcService.observeStream(
@@ -100,7 +229,6 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
 
   const endCall = useCallback(() => {
     if (!isInCall && !webrtcInitializedRef.current && !currentRoomRef.current) {
-      console.log(" Already cleaned up, skipping");
       return;
     }
 
@@ -263,7 +391,6 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
       call_type: CallType;
     }) => {
       if (isInCall) {
-        console.log(" Already in call, ignoring");
         return;
       }
 
@@ -283,7 +410,6 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
             callTypeRef.current ||
             pendingCallRequestRef.current?.call_type ||
             "video";
-
           setIsInCall(true);
           setCallType(callType);
           setPartnerSid(data.from_sid);
@@ -291,7 +417,6 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
           const stream = await webrtcService.initializeLocalStream(callType);
           const pc = webrtcService.createPeerConnection();
           webrtcInitializedRef.current = true;
-
           webrtcService.setOnTrackCallback((remoteStream) => {
             setRemoteStream(remoteStream);
           });
@@ -320,14 +445,11 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
 
         const answer = await webrtcService.handleOffer(data.offer);
         const socketId = socketService.getSocketId();
-
         socketService.emit("webrtc_answer", {
           target_sid: data.from_sid,
           answer,
           from_sid: socketId || "",
         });
-
-        console.log("Answer sent successfully");
       } catch (error) {
         console.error(" Error handling offer:", error);
         showToast("Error", "Failed to process call request", "error");
@@ -351,7 +473,6 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
     async (data: { from_sid: string; candidate: RTCIceCandidateInit }) => {
       try {
         if (!webrtcInitializedRef.current) {
-          console.log("Queueing ICE candidate (WebRTC not initialized)");
           return;
         }
 
@@ -384,7 +505,6 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
         !webrtcInitializedRef.current &&
         !currentRoomRef.current
       ) {
-        console.log(" Call already ended, ignoring end event");
         return;
       }
 
@@ -486,6 +606,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
     endCall,
     toggleMute,
     toggleVideo,
+    switchCamera,
     localStream,
     remoteStream,
   };

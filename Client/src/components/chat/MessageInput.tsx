@@ -26,7 +26,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   // controls emoji list
   const [showEmojiPicker, setShowEmojiPicker] = React.useState(false);
-
+  data;
   return (
     <div className="p-4">
       <div className="flex items-center gap-2">

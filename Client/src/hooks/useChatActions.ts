@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useChatContext } from "../contexts/ChatContext";
 import { useFileUpload } from "./useFileUpload";
 
@@ -14,6 +14,13 @@ export const useChatActions = () => {
   // File input reference
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper function to generate unique ID
+  const generateUniqueId = useCallback((prefix: string = "file") => {
+    return `${prefix}-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 9)}`;
+  }, []);
+
   // Handle sending text and file
   const handleSend = async () => {
     // Send text message
@@ -24,27 +31,36 @@ export const useChatActions = () => {
 
     // Send file message
     if (selectedFile && currentRoom && partnerInfo) {
-      // setIsUploading(true);
-      const fileSize = formatFileSize(selectedFile.size);
-      sendMessage(`📤 Uploading: ${selectedFile.name} (${fileSize})`);
-
+      const uploadId = generateUniqueId("upload");
+      const fileUniqueId = generateUniqueId("file");
+      const fileMessageId = `file-msg-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
+      const fileWithId = Object.assign(selectedFile, {
+        uniqueId: fileUniqueId,
+        uploadId,
+        messageId: fileMessageId,
+      });
+      const existingUpload = uploads.find((u) => u.uploadId === uploadId);
+      if (existingUpload) {
+        console.warn("⚠️ Upload with same ID already exists:", uploadId);
+        return;
+      }
       uploadFile(
-        selectedFile,
+        fileWithId,
         currentRoom,
         partnerInfo.sid,
-        (fileId) => {
-          sendMessage(`File sent: ${selectedFile.name}`);
-          console.log("File uploaded successfully:", fileId);
+        uploadId,
+        () => {
+          console.log("✅ File upload completed successfully");
         },
         (error) => {
-          sendMessage(` Upload failed: ${selectedFile.name}`);
           console.error(" Upload error:", error);
         }
       );
 
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-
     }
   };
 
@@ -57,7 +73,14 @@ export const useChatActions = () => {
         alert("File size must be less than 50 GB");
         return;
       }
-      setSelectedFile(file);
+
+      // Add unique identifier to file
+      const fileWithId = Object.assign(file, {
+        uniqueId: generateUniqueId("file"),
+        selectedAt: Date.now(),
+      });
+
+      setSelectedFile(fileWithId);
     }
   };
 
@@ -79,11 +102,3 @@ export const useChatActions = () => {
     cancelUpload,
   };
 };
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}

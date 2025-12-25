@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 interface Upload {
+  uploadId: string;
   fileId: string;
   fileName: string;
   progress: number;
@@ -34,7 +35,7 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
     <div className="px-4 pb-3 space-y-2">
       {uploads.map((upload) => (
         <div
-          key={upload.fileId}
+          key={upload.uploadId}
           className="p-3 rounded-xl bg-primary-500/10 border border-primary-500/20"
         >
           <div className="flex items-center gap-3">

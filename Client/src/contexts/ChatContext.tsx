@@ -253,6 +253,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   const handleReceivePrivateMessage = useCallback(
     (data: PrivateMessageData) => {
+      if (data.from_sid === myInfo.sid) {
+        return;
+      }
       const message: Message = {
         id: `msg-${Date.now()}-${Math.random()}`,
         from_sid: data.from_sid,
@@ -270,7 +273,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         playNotificationSound();
       }
     },
-    [showToast, playNotificationSound]
+    [showToast, playNotificationSound, myInfo.sid]
   );
 
   const handlePartnerLeftChat = useCallback(
@@ -407,6 +410,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         return;
       }
 
+      const messageId = `msg-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
       const timestamp = new Date().toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
@@ -417,14 +423,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
           room_id: room,
           message: messageText,
           timestamp,
-        })
+          messageId,
+        } )
         .catch((error) => {
           console.error(" Failed to send message:", error);
           showToast("Error", "Failed to send message", "error");
         });
 
       const message: Message = {
-        id: `msg-${Date.now()}`,
+        id: messageId,
         from_sid: myInfo.sid,
         from_username: myInfo.username,
         message: messageText,
@@ -432,7 +439,24 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         type: "sent",
       };
 
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => {
+        const isDuplicate = prev.some(
+          (m) =>
+            m.id === messageId ||
+            (m.message === messageText &&
+              m.from_sid === myInfo.sid &&
+              m.timestamp === timestamp)
+        );
+
+        if (isDuplicate) {
+          console.warn("⚠️ Duplicate message prevented:", {
+            id: messageId,
+            message: messageText.substring(0, 30),
+          });
+          return prev;
+        }
+        return [...prev, message];
+      });
     },
     [myInfo, showToast]
   );

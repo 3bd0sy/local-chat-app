@@ -9,7 +9,6 @@ export class WebRTCService {
   private remoteStream: MediaStream | null = null;
   private onTrackCallbacks: StreamCallback[] = [];
   private onIceCandidateCallbacks: IceCandidateCallback[] = [];
-  private debugMode = false;
   private pendingIceCandidates: RTCIceCandidateInit[] = [];
   private isRemoteDescriptionSet = false;
 
@@ -18,6 +17,33 @@ export class WebRTCService {
   // Stream Observables
   private streamObservers: Map<string, Set<StreamCallback>> = new Map();
 
+  getPeerConnection(): RTCPeerConnection | null {
+    return this.peerConnection;
+  }
+
+  updateLocalStream(newStream: MediaStream): void {
+    this.localStream = newStream;
+    this.notifyObservers("localStream", newStream);
+  }
+
+  observeStream(
+    type: "localStream" | "remoteStream",
+    callback: StreamCallback
+  ): () => void {
+    if (!this.streamObservers.has(type)) {
+      this.streamObservers.set(type, new Set());
+    }
+
+    this.streamObservers.get(type)!.add(callback);
+
+    // Call immediately with current value
+    if (type === "localStream") callback(this.localStream);
+    if (type === "remoteStream") callback(this.remoteStream);
+
+    return () => {
+      this.streamObservers.get(type)?.delete(callback);
+    };
+  }
   async initializeLocalStream(type: CallType): Promise<MediaStream> {
     try {
       const constraints: MediaStreamConstraints = {
@@ -54,7 +80,13 @@ export class WebRTCService {
 
   createPeerConnection(): RTCPeerConnection {
     const configuration: RTCConfiguration = {
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" },
+      ],
       iceCandidatePoolSize: 10,
       iceTransportPolicy: "all",
       bundlePolicy: "max-bundle",
@@ -68,6 +100,8 @@ export class WebRTCService {
         this.onIceCandidateCallbacks.forEach((callback) =>
           callback(event.candidate!)
         );
+      } else {
+        console.log("All ICE candidates generated");
       }
     };
 
@@ -225,31 +259,18 @@ export class WebRTCService {
     }
   }
 
-  // Observer pattern for streams
-  observeStream(
-    type: "localStream" | "remoteStream",
-    callback: StreamCallback
-  ): () => void {
-    if (!this.streamObservers.has(type)) {
-      this.streamObservers.set(type, new Set());
-    }
-
-    this.streamObservers.get(type)!.add(callback);
-
-    if (type === "localStream") callback(this.localStream);
-    if (type === "remoteStream") callback(this.remoteStream);
-
-    return () => {
-      this.streamObservers.get(type)?.delete(callback);
-    };
-  }
-
   private notifyObservers(
     type: "localStream" | "remoteStream",
     stream: MediaStream | null
   ) {
-    this.streamObservers.get(type)?.forEach((callback) => {
-      callback(stream);
+    const observers = this.streamObservers.get(type);
+
+    observers?.forEach((callback) => {
+      try {
+        callback(stream);
+      } catch (error) {
+        console.log(`Error in ${type} observer callback`, error);
+      }
     });
   }
 
@@ -318,17 +339,6 @@ export class WebRTCService {
       remoteDescription: this.peerConnection?.remoteDescription,
       localDescription: this.peerConnection?.localDescription,
     };
-  }
-
-  // Debug
-  debugPeerConnection(label: string) {
-    if (!this.debugMode) return;
-
-    const pc = this.peerConnection;
-    if (!pc) {
-      console.log(`${label}: No peer connection`);
-      return;
-    }
   }
 
   // Getters

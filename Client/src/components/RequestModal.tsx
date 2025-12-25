@@ -3,7 +3,6 @@ import { Check, X, Clock, Globe } from "lucide-react";
 import { useChatContext } from "../contexts/ChatContext";
 import { useCallContext } from "../contexts/CallContext";
 import {
-  // isCallRequest,
   getRequestIcon,
   getRequestColor,
   getRequestTitle,

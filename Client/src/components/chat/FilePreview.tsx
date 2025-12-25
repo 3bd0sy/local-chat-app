@@ -54,7 +54,10 @@ const FilePreview: React.FC<FilePreviewProps> = ({ file, onRemove }) => {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
   return (
-    <div className="px-4 pt-3">
+    <div
+      key={(file as any).uniqueId || file.name} // Use uniqueId as key
+      className="px-4 pt-3"
+    >
       <div className="flex items-center gap-3 p-3 rounded-xl bg-primary-500/10 border border-primary-500/20">
         <div className="p-2 rounded-lg bg-primary-500/20">{getFileIcon()}</div>
 

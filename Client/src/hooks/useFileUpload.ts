@@ -3,6 +3,7 @@ import apiClient from "../api/API";
 import { useChatContext } from "../contexts/ChatContext";
 
 interface UploadProgress {
+  uploadId: string;
   fileId: string;
   fileName: string;
   progress: number; // 0-100
@@ -10,6 +11,7 @@ interface UploadProgress {
   totalChunks: number;
   status: "pending" | "uploading" | "paused" | "completed" | "error";
   speed: string; // e.g., "2.5 MB/s"
+  file: File & { uniqueId?: string; uploadId?: string };
 }
 
 const CHUNK_SIZE = 1024 * 1024; // 1 MB per chunk
@@ -22,15 +24,35 @@ export const useFileUpload = () => {
   const abortControllers = useRef<Map<string, AbortController>>(new Map());
 
   const uploadedChunks = useRef<Map<string, Set<number>>>(new Map());
-  const { socketService, addMessage, partnerInfo } = useChatContext();
+  const receivedFileIds = useRef<Set<string>>(new Set());
+
+  const { socketService, addMessage, partnerInfo, myInfo } = useChatContext();
+
+  const generateUniqueId = useCallback((prefix: string = "file") => {
+    return `${prefix}-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 9)}`;
+  }, []);
 
   useEffect(() => {
     if (!socketService) return;
 
     const handleFileReceived = (data: any) => {
-      console.log("📥 File received from partner:", data);
+      if (data.from_sid === myInfo.sid) {
+        return;
+      }
+
+      const fileIdentifier = `${data.fileId}-${data.from_sid}`;
+
+      if (receivedFileIds.current.has(fileIdentifier)) {
+        return;
+      }
+      receivedFileIds.current.add(fileIdentifier);
+      const messageId = `file-msg-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
       const fileMessage = {
-        id: `file-${Date.now()}`,
+        id: messageId,
         from_sid: data.from_sid || "partner",
         from_username: partnerInfo?.username || "Partner",
         message: "", // Empty because it's a file
@@ -47,36 +69,58 @@ export const useFileUpload = () => {
           fileCategory: data.fileCategory,
           fileIcon: data.fileIcon,
           downloadUrl: data.downloadUrl,
+          uniqueId: data.uniqueId || generateUniqueId("file"),
         },
       };
       addMessage(fileMessage);
+      setTimeout(() => {
+        receivedFileIds.current.delete(fileIdentifier);
+      }, 10000);
     };
 
+    socketService.off("file_received", handleFileReceived);
     socketService.on("file_received", handleFileReceived);
 
     return () => {
       socketService.off("file_received", handleFileReceived);
     };
-  }, [socketService, addMessage, partnerInfo]);
+  }, [socketService, addMessage, partnerInfo, myInfo]);
+
+  const isDuplicateUpload = useCallback(
+    (uploadId: string): boolean => {
+      const uploadsArray = Array.from(uploads.values());
+      return uploadsArray.some((upload) => upload.uploadId === uploadId);
+    },
+    [uploads]
+  );
 
   // Start file upload
   const uploadFile = useCallback(
     async (
-      file: File,
+      file: File & { uniqueId?: string; uploadId?: string },
       roomId: string,
       partnerSid: string,
+      uploadId?: string,
       onComplete?: (fileId: string) => void,
       onError?: (error: string) => void
     ) => {
-      const fileId = `file-${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 9)}`;
+      const finalUploadId =
+        uploadId || file.uploadId || generateUniqueId("upload");
+      const fileId = generateUniqueId("server-file");
+
+      // Check for duplicate upload
+      if (isDuplicateUpload(finalUploadId)) {
+        console.warn("⚠️ Duplicate upload detected, skipping:", finalUploadId);
+        onError?.("Duplicate upload detected");
+        return;
+      }
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
       // Initialize upload state
       setUploads((prev) => {
         const newMap = new Map(prev);
         newMap.set(fileId, {
+          uploadId: finalUploadId,
           fileId,
           fileName: file.name,
           progress: 0,
@@ -84,6 +128,7 @@ export const useFileUpload = () => {
           totalChunks,
           status: "uploading",
           speed: "0 KB/s",
+          file: file,
         });
         return newMap;
       });
@@ -101,6 +146,7 @@ export const useFileUpload = () => {
         await apiClient.post(
           "/api/files/init",
           {
+            uploadId: finalUploadId,
             fileId,
             fileName: file.name,
             fileSize: file.size,
@@ -108,6 +154,7 @@ export const useFileUpload = () => {
             totalChunks,
             roomId,
             partnerSid,
+            uniqueId: file.uniqueId,
           },
           { signal: abortController.signal }
         );
@@ -128,7 +175,9 @@ export const useFileUpload = () => {
           formData.append("chunkIndex", chunkIndex.toString());
           formData.append("totalChunks", totalChunks.toString());
           formData.append("chunk", chunk);
-
+          if (file.uniqueId) {
+            formData.append("uniqueId", file.uniqueId);
+          }
           // Upload chunk with retry logic
           let retries = 3;
           while (retries > 0) {
@@ -173,7 +222,13 @@ export const useFileUpload = () => {
         // Complete upload
         await apiClient.post(
           "/api/files/complete",
-          { fileId, roomId, partnerSid },
+          {
+            uploadId: finalUploadId,
+            fileId,
+            roomId,
+            partnerSid,
+            uniqueId: file.uniqueId,
+          },
           { signal: abortController.signal }
         );
 
@@ -189,6 +244,34 @@ export const useFileUpload = () => {
           }
           return newMap;
         });
+
+        const messageId = `file-sent-${Date.now()}-${Math.random()
+          .toString(36)
+          .substring(2, 9)}`;
+        const timestamp = new Date().toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        const sentMessage = {
+          id: messageId,
+          from_sid: myInfo.sid,
+          from_username: myInfo.username,
+          message: "",
+          timestamp,
+          type: "sent" as const,
+          fileData: {
+            fileId,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            fileCategory: getFileCategory(file.name),
+            fileIcon: getFileIcon(getFileCategory(file.name)),
+            downloadUrl: `/api/files/download/${fileId}_${file.name}`,
+          },
+        };
+
+        addMessage(sentMessage);
 
         onComplete?.(fileId);
 
@@ -215,6 +298,21 @@ export const useFileUpload = () => {
         });
 
         onError?.(error.message || "Upload failed");
+        // Clean up on error after delay
+        setTimeout(() => {
+          setUploads((prev) => {
+            const newMap = new Map(prev);
+            for (let [fileId, upload] of newMap) {
+              if (upload.uploadId === finalUploadId) {
+                newMap.delete(fileId);
+                break;
+              }
+            }
+            return newMap;
+          });
+          abortControllers.current.delete(finalUploadId);
+          uploadedChunks.current.delete(finalUploadId);
+        }, 5000);
       }
     },
     []
@@ -237,8 +335,17 @@ export const useFileUpload = () => {
   }, []);
 
   // Cancel upload
-  const cancelUpload = useCallback((fileId: string) => {
-    const controller = abortControllers.current.get(fileId);
+  const cancelUpload = useCallback((uploadId: string) => {
+    let targetFileId = "";
+    for (let [fileId, upload] of uploads) {
+      if (upload.uploadId === uploadId) {
+        targetFileId = fileId;
+        break;
+      }
+    }
+
+    if (!targetFileId) return;
+    const controller = abortControllers.current.get(targetFileId);
 
     if (controller) {
       controller.abort("Upload cancelled");
@@ -246,12 +353,12 @@ export const useFileUpload = () => {
 
     setUploads((prev) => {
       const newMap = new Map(prev);
-      newMap.delete(fileId);
+      newMap.delete(targetFileId);
       return newMap;
     });
 
-    abortControllers.current.delete(fileId);
-    uploadedChunks.current.delete(fileId);
+    abortControllers.current.delete(targetFileId);
+    uploadedChunks.current.delete(targetFileId);
   }, []);
 
   return {
@@ -269,7 +376,48 @@ function formatSpeed(bytesPerSecond: number): string {
     return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
   return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
 }
+// Helper function to get file category
+function getFileCategory(filename: string): string {
+  if (!filename.includes(".")) return "other";
 
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+
+  const imageExts = ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"];
+  const videoExts = ["mp4", "avi", "mov", "wmv", "flv", "mkv"];
+  const audioExts = ["mp3", "wav", "ogg", "m4a", "flac"];
+  const docExts = [
+    "pdf",
+    "doc",
+    "docx",
+    "txt",
+    "rtf",
+    "xls",
+    "xlsx",
+    "ppt",
+    "pptx",
+  ];
+
+  if (imageExts.includes(ext)) return "images";
+  if (videoExts.includes(ext)) return "videos";
+  if (audioExts.includes(ext)) return "audio";
+  if (docExts.includes(ext)) return "documents";
+
+  return "other";
+}
+
+// Helper function to get file icon
+function getFileIcon(category: string): string {
+  const icons: Record<string, string> = {
+    images: "🖼️",
+    videos: "🎬",
+    audio: "🎵",
+    documents: "📄",
+    archives: "📦",
+    code: "💻",
+    other: "📁",
+  };
+  return icons[category] || "📁";
+}
 export const getSupportedFileTypes = async () => {
   try {
     const response = await apiClient.get("/api/files/supported-types");

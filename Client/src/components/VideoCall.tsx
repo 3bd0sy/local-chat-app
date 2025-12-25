@@ -16,6 +16,7 @@ import {
   VolumeX,
   Settings,
   User,
+  Camera,
 } from "lucide-react";
 import { useChatContext } from "../contexts/ChatContext";
 import { useCallContext } from "../contexts/CallContext";
@@ -38,6 +39,7 @@ export const VideoCall: React.FC = () => {
     toggleMute,
     toggleVideo,
     endCall,
+    switchCamera,
   } = useCallContext();
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -289,7 +291,6 @@ export const VideoCall: React.FC = () => {
                 <Mic className="w-5 h-5 md:w-6 md:h-6" />
               )}
             </button>
-
             {/* Video Toggle (only for video calls) */}
             {callType === "video" && (
               <button
@@ -308,7 +309,6 @@ export const VideoCall: React.FC = () => {
                 )}
               </button>
             )}
-
             {/* End Call Button */}
             <button
               onClick={endCall}
@@ -316,6 +316,14 @@ export const VideoCall: React.FC = () => {
               title="End call"
             >
               <PhoneOff className="w-5 h-5 md:w-6 md:h-6" />
+            </button>
+            <button
+              onClick={switchCamera}
+              className="relative p-3 md:p-4 rounded-full bg-white/10 hover:bg-white/20 transition-all"
+              title="Switch camera"
+              disabled={isVideoOff}
+            >
+              <Camera className="w-5 h-5 md:w-6 md:h-6" />
             </button>
 
             {/* Speaker Toggle */}
@@ -334,7 +342,6 @@ export const VideoCall: React.FC = () => {
                 <Volume2 className="w-5 h-5 md:w-6 md:h-6" />
               )}
             </button>
-
             {/* Fullscreen Toggle */}
             <button
               onClick={toggleFullscreen}
