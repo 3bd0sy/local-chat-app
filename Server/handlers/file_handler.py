@@ -343,7 +343,8 @@ def register_file_handlers(app, socketio):
 
             file_id = data["fileId"]
             room_id = data.get("roomId")
-
+            partner_sid = data.get("partnerSid")
+            upload_id = data.get("uploadId")
             # Get temporary directory path
             temp_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], file_id)
 
@@ -398,8 +399,24 @@ def register_file_handlers(app, socketio):
 
             print(f"File upload completed: {file_name} ({final_size:,} bytes)")
 
-            # Notify recipient via Socket.IO (if room exists)
-            if room_id:
+            if partner_sid:
+                file_data = {
+                    "fileId": file_id,
+                    "fileName": file_name,
+                    "originalName": original_name,
+                    "fileSize": final_size,
+                    "fileType": metadata["fileType"],
+                    "fileCategory": metadata.get("fileCategory", "other"),
+                    "fileIcon": metadata.get("fileIcon", "📁"),
+                    "downloadUrl": f"/api/files/download/{file_id}_{file_name}",
+                    "timestamp": datetime.now().isoformat(),
+                    "from_sid": partner_sid,
+                }
+
+                socketio.emit("file_received", file_data, to=partner_sid)
+                print(f"📤 File notification sent to partner: {partner_sid}")
+
+            elif room_id:
                 socketio.emit(
                     "file_received",
                     {
@@ -412,10 +429,10 @@ def register_file_handlers(app, socketio):
                         "fileIcon": metadata.get("fileIcon", "📁"),
                         "downloadUrl": f"/api/files/download/{file_id}_{file_name}",
                         "timestamp": datetime.now().isoformat(),
+                        "from_sid": request.sid,
                     },
                     room=room_id,
                 )
-
             return jsonify(
                 {
                     "success": True,
