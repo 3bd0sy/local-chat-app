@@ -2,45 +2,110 @@
  * Type definitions for the chat application
  */
 
-// User information interface
-export interface UserInfo {
+export type UserStatus = "online" | "offline" | "busy" | "in_call";
+export type CallType = "video" | "audio";
+export type RequestType = "chat" | "call";
+export type MessageType = "sent" | "received";
+export type ToastType = "success" | "error" | "info" | "warning";
+
+// Base Interfaces
+
+interface BaseUserInfo {
   sid: string;
-  ip: string;
   username: string;
+}
+
+export interface UserInfo extends BaseUserInfo {
+  ip: string;
   status: UserStatus;
   in_call?: boolean;
 }
 
-// Message interface
-export interface Message {
+interface BaseRequest {
+  request_id: string;
+  from_sid: string;
+  from_username: string;
+  timestamp: string;
+}
+
+export interface BaseChatStartedData {
+  room_id: string;
+  partner_sid: string;
+  partner_username: string;
+  partner_ip: string;
+}
+
+// File Types
+
+export interface FileData {
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  fileCategory?: string;
+  fileIcon?: string;
+  downloadUrl: string;
+}
+
+export interface FileReceivedData extends FileData {
+  originalName?: string;
+  timestamp?: string;
+  from_sid?: string;
+}
+
+// Message Types
+
+export interface BaseMessage {
   id: string;
   from_sid: string;
   from_username: string;
   message: string;
   timestamp: string;
-  type: "sent" | "received";
-  fileData?: {
-    fileId: string;
-    fileName: string;
-    fileSize: number;
-    fileType: string;
-    fileCategory?: string;
-    fileIcon?: string;
-    downloadUrl: string;
-  };
 }
 
-// Call types
-export type CallType = "video" | "audio";
+export interface Message extends BaseMessage {
+  type: MessageType;
+  fileData?: FileData;
+}
 
-// Connection state
+// Request Types
+
+export interface ChatRequest extends BaseRequest {
+  type: "chat";
+  from_ip: string;
+}
+
+export interface CallRequest extends BaseRequest {
+  type: "call";
+  from_ip: string;
+  call_type: CallType;
+}
+
+export interface ConnectionEstablishedData extends BaseUserInfo {
+  ip: string;
+}
+
+export interface OnlineUsersData {
+  users: UserInfo[];
+}
+
+export interface ChatStartedData extends BaseChatStartedData {}
+
+export interface PrivateMessageData extends BaseMessage {}
+
+export interface PartnerLeftData {
+  username: string;
+  room_id: string;
+}
+
+// State Types
+
 export interface ConnectionState {
   connected: boolean;
   connecting: boolean;
   error: string | null;
 }
 
-// WebRTC state interface
 export interface WebRTCState {
   peerConnection: RTCPeerConnection | null;
   localStream: MediaStream | null;
@@ -48,7 +113,6 @@ export interface WebRTCState {
   pendingCandidates: RTCIceCandidate[];
 }
 
-// App state interface
 export interface AppState {
   myInfo: UserInfo;
   currentRoom: string | null;
@@ -61,66 +125,59 @@ export interface AppState {
   callType: CallType | null;
 }
 
-// Socket event payloads
-export interface SocketEventPayloads {
+export interface ChatState {
+  myInfo: UserInfo;
+  onlineUsers: UserInfo[];
+  currentRoom: string | null;
+  partnerSid: string | null;
+  partnerInfo: UserInfo | null;
+  pendingChatRequest: ChatRequest | null;
+  messages: Message[];
+  connected: boolean;
+}
+
+interface BaseSocketPayloads {
   // Connection events
   connect: void;
   disconnect: void;
-
-  connection_established: { sid: string; ip: string; username: string };
-  online_users_list: { users: UserInfo[] };
+  connection_established: ConnectionEstablishedData;
+  online_users_list: OnlineUsersData;
 
   // User events
   get_online_users: void;
   set_username: { username: string };
 
+  // Common events with request_id
+  accept_request: { request_id: string };
+  reject_request: { request_id: string };
+}
+
+interface ChatSpecificPayloads {
   // Chat events
   incoming_chat_request: ChatRequest;
   send_chat_request: { target_sid: string };
-
-  // chat events
-  file_received: {
-    fileId: string;
-    fileName: string;
-    originalName?: string;
-    fileSize: number;
-    fileType: string;
-    fileCategory?: string;
-    fileIcon?: string;
-    downloadUrl: string;
-    timestamp?: string;
-    from_sid?: string;
-  };
-
-  chat_request_accepted: {
-    room_id: string;
-    partner_sid: string;
-    partner_username: string;
-    partner_ip: string;
-  };
-  accept_chat_request: { request_id: string };
-  chat_started: {
-    room_id: string;
-    partner_sid: string;
-    partner_username: string;
-    partner_ip: string;
-  };
+  chat_request_accepted: ChatStartedData;
+  chat_started: ChatStartedData;
   chat_request_rejected: { by_username: string };
-  reject_chat_request: { request_id: string };
-  receive_private_message: {
-    from_sid: string;
-    from_username: string;
-    message: string;
-    timestamp: string;
-  };
+  receive_private_message: PrivateMessageData;
   send_private_message: {
     room_id: string;
     message: string;
     timestamp: string;
+    messageId?: string;
   };
   partner_left_chat: PartnerLeftData;
   leave_chat: { room_id: string };
+  reject_chat_request: { request_id: string };
+  accept_chat_request: { request_id: string };
+}
 
+interface FileSpecificPayloads {
+  // File events
+  file_received: FileReceivedData;
+}
+
+interface CallSpecificPayloads {
   // Call events
   incoming_call: CallRequest;
   start_call: {
@@ -142,7 +199,9 @@ export interface SocketEventPayloads {
   reject_call: { request_id: string };
   call_ended: { ended_by: string };
   end_call: { room_id: string };
+}
 
+interface WebRTCSpecificPayloads {
   // WebRTC events
   webrtc_offer: {
     target_sid: string;
@@ -162,52 +221,49 @@ export interface SocketEventPayloads {
   webrtc_call_ended: Record<string, never>;
 }
 
-export interface SocketEmitPayloads {
-  get_online_users: void;
-  set_username: { username: string };
-  send_chat_request: { target_sid: string };
-  accept_chat_request: { request_id: string };
-  reject_chat_request: { request_id: string };
-  send_private_message: {
-    room_id: string;
-    message: string;
-    timestamp: string;
-  };
-  leave_chat: { room_id: string };
-  start_call: {
-    target_sid: string;
-    call_type: CallType;
-  };
-  accept_call: { request_id: string };
-  reject_call: { request_id: string };
-  end_call: { room_id: string };
-  webrtc_offer: {
-    target_sid: string;
-    offer: RTCSessionDescriptionInit;
-    from_sid: string;
-  };
-  webrtc_answer: {
-    target_sid: string;
-    answer: RTCSessionDescriptionInit;
-    from_sid: string;
-  };
-  webrtc_ice_candidate: {
-    target_sid: string;
-    candidate: RTCIceCandidateInit;
-    from_sid: string;
-  };
-}
+// Combined Socket Event Types
 
-// Toast notification
+export type SocketEventPayloads = BaseSocketPayloads &
+  ChatSpecificPayloads &
+  FileSpecificPayloads &
+  CallSpecificPayloads &
+  WebRTCSpecificPayloads;
+
+export type SocketEmitPayloads = Pick<
+  SocketEventPayloads,
+  | "get_online_users"
+  | "set_username"
+  | "send_chat_request"
+  | "accept_chat_request"
+  | "reject_chat_request"
+  | "send_private_message"
+  | "leave_chat"
+  | "start_call"
+  | "accept_call"
+  | "reject_call"
+  | "end_call"
+  | "webrtc_offer"
+  | "webrtc_answer"
+  | "webrtc_ice_candidate"
+>;
+
+// Toast Notification
+
 export interface ToastNotification {
   id: string;
   title: string;
   message: string;
-  type: "success" | "error" | "info" | "warning";
+  type: ToastType;
   duration?: number;
 }
 
-// Extend RTCIceCandidateInit type to fix property 'type' error
+// Helper Types for Socket Service
+
+export type SocketEvent = keyof SocketEventPayloads;
+export type SocketEventData<T extends SocketEvent> = SocketEventPayloads[T];
+
+// Type Extensions
+
 declare global {
   interface RTCIceCandidateInit {
     candidate?: string;
@@ -217,76 +273,19 @@ declare global {
   }
 }
 
-// User Types
-export type UserStatus = "online" | "offline" | "busy" | "in_call";
-
-// Request Types
-export type RequestType = "chat" | "call";
-
-export interface BaseRequest {
-  request_id: string;
-  from_sid: string;
-  from_username: string;
-  type: RequestType;
-  timestamp: string;
+export function isChatRequest(request: any): request is ChatRequest {
+  return request?.type === "chat";
 }
 
-export interface ChatState {
-  myInfo: UserInfo;
-  onlineUsers: UserInfo[];
-  currentRoom: string | null;
-  partnerSid: string | null;
-  partnerInfo: UserInfo | null;
-  pendingChatRequest: ChatRequest | null;
-  messages: Message[];
-  connected: boolean;
+export function isCallRequest(request: any): request is CallRequest {
+  return request?.type === "call";
 }
 
-// Event Data Types
-export interface ConnectionEstablishedData {
-  sid: string;
-  ip: string;
-  username: string;
+export function isMessage(message: any): message is Message {
+  return (
+    message &&
+    typeof message.id === "string" &&
+    typeof message.from_sid === "string" &&
+    typeof message.message === "string"
+  );
 }
-
-export interface OnlineUsersData {
-  users: UserInfo[];
-}
-
-export interface ChatStartedData {
-  room_id: string;
-  partner_sid: string;
-  partner_username: string;
-  partner_ip: string;
-}
-
-export interface PrivateMessageData {
-  from_sid: string;
-  from_username: string;
-  message: string;
-  timestamp: string;
-}
-
-export interface PartnerLeftData {
-  username: string;
-  room_id: string;
-}
-
-export interface ChatRequest {
-  request_id: string;
-  from_sid: string;
-  from_username: string;
-  from_ip: string;
-}
-
-export interface CallRequest {
-  request_id: string;
-  from_sid: string;
-  from_username: string;
-  from_ip: string;
-  call_type: CallType;
-}
-
-// Helper types for socket service
-export type SocketEvent = keyof SocketEventPayloads;
-export type SocketEventData<T extends SocketEvent> = SocketEventPayloads[T];
