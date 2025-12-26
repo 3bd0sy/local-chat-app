@@ -4,6 +4,7 @@ Main application entry point
 """
 
 import eventlet
+
 eventlet.monkey_patch()
 
 import eventlet.wsgi
@@ -24,15 +25,17 @@ from handlers.socket_handlers import register_socket_handlers
 from services.network_service import get_local_ip
 
 
-name = """
-         .d8888b.  888888b.   8888888b.   .d88888b.          .d8888b. Y88b   d88P 
-        d88P  Y88b 888  "88b  888  "Y88b d88P" "Y88b        d88P  Y88b Y88b d88P  
-             .d88P 888  .88P  888    888 888     888        Y88b.       Y88o88P   
-            8888"  8888888K.  888    888 888     888         "Y888b.     Y888P    
-             "Y8b. 888  "Y88b 888    888 888     888            "Y88b.    888     
-        888    888 888    888 888    888 888     888              "888    888     
-        Y88b  d88P 888   d88P 888  .d88P Y88b. .d88P        Y88b  d88P    888     
-         "Y8888P"  8888888P"  8888888P"   "Y88888P" 88888888 "Y8888P"     888     
+banner = """
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║ ██╗        █████╗   ███╗   ██╗         ██████╗  ██╗  ██╗   █████╗   ████████╗ ║
+║ ██║       ██╔══██╗  ████╗  ██║        ██╔════╝  ██║  ██║  ██╔══██╗  ╚══██╔══╝ ║
+║ ██║       ███████║  ██╔██╗ ██║        ██║       ███████║  ███████║     ██║    ║
+║ ██║       ██╔══██║  ██║╚██╗██║        ██║       ██╔══██║  ██╔══██║     ██║    ║
+║ ███████╗  ██║  ██║  ██║ ╚████║        ╚██████╗  ██║  ██║  ██║  ██║     ██║    ║
+║ ╚══════╝  ╚═╝  ╚═╝  ╚═╝  ╚═══╝         ╚═════╝  ╚═╝  ╚═╝  ╚═╝  ╚═╝     ╚═╝    ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
 """
 
 
@@ -43,17 +46,19 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-
-    CORS(app, resources={
-        r"/*": {
-            "origins": "*",  # ["https://173.10.10.245:5173"]
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "expose_headers": ["Content-Range", "X-Content-Range"],
-            "supports_credentials": True,
-            "max_age": 3600
-        }
-    })
+    CORS(
+        app,
+        resources={
+            r"/*": {
+                "origins": "*",  # ["https://173.10.10.245:5173"]
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"],
+                "expose_headers": ["Content-Range", "X-Content-Range"],
+                "supports_credentials": True,
+                "max_age": 3600,
+            }
+        },
+    )
 
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     os.makedirs(app.config["COMPLETED_FOLDER"], exist_ok=True)
@@ -105,19 +110,16 @@ if __name__ == "__main__":
 
     # Display startup information
     print("=" * 60)
-    print("🚀 Enhanced Chat Application Server")
-    print(name)
+    print("Chat Application Server")
+    print(banner)
     print("=" * 60)
-    print(f"📍 Local IP: {local_ip}")
-    print(f"🌐 Server URL: https://{local_ip}:{port}")
-    print(f"✨ Features:")
-    print(f"   • Private chat with connection requests")
-    print(f"   • Video calls via WebRTC")
-    print(f"   • Audio calls via WebRTC")
-    print(f"   • Real-time notifications")
-    print("=" * 60)
-    print("Press CTRL+C to stop")
-    print("=" * 60)
+    print(f"Local IP: {local_ip}")
+    print(f"Server URL: https://{local_ip}:{port}")
+    print(f"Features:")
+    print(f" • Private chat with connection requests")
+    print(f" • Video calls via WebRTC")
+    print(f" • Audio calls via WebRTC")
+    print(f" • Real-time notifications")
 
     try:
 
@@ -129,9 +131,8 @@ if __name__ == "__main__":
             server_side=True,
         )
 
-        print(" SSL listener created successfully")
-        print("🌐 Server is running! Open your browser to:")
-        print(f"   https://{local_ip}:{port}")
+        print(" Server is running! Open your browser to:")
+        print(f" https://{local_ip}:{port}")
         print("=" * 60)
         print("Press CTRL+C to stop the server")
         print("=" * 60)
@@ -140,19 +141,9 @@ if __name__ == "__main__":
         eventlet.wsgi.server(listener, app)
 
     except PermissionError:
-        print(
-            " Permission denied! Please run as administrator or use a different port"
-        )
-        print(
-            f"   Try: sudo python app.py (Linux/Mac) or Run as Administrator (Windows)"
-        )
+        print(" Permission denied! Please run as administrator or use a different port")
     except OSError as e:
         print(f" OS Error: {e}")
-        print("   Possible causes:")
-        print("   1. Port 5000 is already in use")
-        print("   2. Firewall blocking the port")
-        print("   3. IP address not available")
-        print("   Solution: Try changing port or IP address")
     except Exception as e:
         print(f" Unexpected error: {type(e).__name__}: {e}")
         import traceback
