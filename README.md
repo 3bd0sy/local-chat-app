@@ -2,7 +2,7 @@
 
 A comprehensive real-time chat application with video/audio call capabilities, file sharing, emoji support, and offline functionality - all working on your local network.
 
-![Application Interface](images\home.png)
+![Application Interface](images/home.png)
 
 ## ✨ Key Features
 
@@ -159,7 +159,7 @@ https://[your-ip-address]:5000
 
 ### 🔹 Main Screen
 
-![Welcome Screen](images\home-user.png)
+![Welcome Screen](images/home-user.png)
 
 ### 🔹 Chat Interface
 
@@ -175,7 +175,7 @@ https://[your-ip-address]:5000
 
 ### 🔹 Video Call
 
-![Video Call](images\video-call.png)
+![Video Call](images/video-call.png)
 
 ## 🔒 Security & Privacy
 
