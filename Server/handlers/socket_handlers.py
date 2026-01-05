@@ -1,4 +1,5 @@
 """
+Server\handlers\socket_handlers.py
 Socket event handlers for real-time communication
 """
 
@@ -33,7 +34,7 @@ def get_client_ip():
                         peer = sock.getpeername()
                         return peer[0]
                     except Exception as e:
-                        print(f" Error in getpeername: {e}")
+                        print(f"Error in getpeername: {e}")
 
         remote_addr = request.remote_addr
 
@@ -45,7 +46,7 @@ def get_client_ip():
             return "unknown"
 
     except Exception as e:
-        print(f" Error in get_client_ip: {e}")
+        print(f"Error in get_client_ip: {e}")
         return request.remote_addr if request.remote_addr else "unknown"
 
 

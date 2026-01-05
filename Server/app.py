@@ -5,6 +5,9 @@ Main application entry point
 
 import eventlet
 
+from middleware.error_handlers import register_error_handlers
+from middleware.middleware import setup_cors_headers
+
 eventlet.monkey_patch()
 
 import eventlet.wsgi
@@ -79,7 +82,10 @@ def create_app():
     register_http_handlers(app)
     register_socket_handlers(app, socketio)
     register_file_handlers(app, socketio)
-
+    # Setup CORS middleware
+    setup_cors_headers(app)
+    # Register global error handlers
+    register_error_handlers(app)
     return app, socketio
 
 
@@ -89,22 +95,22 @@ if __name__ == "__main__":
     cert_path = os.path.normpath(cert_file)
     key_path = os.path.normpath(key_file)
 
-    print("🔍 Checking SSL certificates...")
+    print("Checking SSL certificates...")
     if not os.path.exists(cert_path):
-        print(f" Certificate file not found: {cert_path}")
-        print("   Please check the path or generate certificates with mkcert")
+        print(f"Certificate file not found: {cert_path}")
+        print("Please check the path or generate certificates with mkcert")
         exit(1)
     else:
-        print(f" Certificate file found: {cert_path}")
+        print(f"Certificate file found: {cert_path}")
 
     if not os.path.exists(key_path):
-        print(f" Key file not found: {key_path}")
-        print("   Please check the path or generate certificates with mkcert")
+        print(f"Key file not found: {key_path}")
+        print("Please check the path or generate certificates with mkcert")
         exit(1)
     else:
-        print(f" Key file found: {key_path}")
+        print(f"Key file found: {key_path}")
 
-    app, socketio = create_app()
+    app, _ = create_app()
     local_ip = get_local_ip()
     port = 5000
 
@@ -123,7 +129,7 @@ if __name__ == "__main__":
 
     try:
 
-        print(f"🔒 Creating SSL listener on {local_ip}:{port}...")
+        print(f"Creating SSL listener on {local_ip}:{port}...")
         listener = eventlet.wrap_ssl(
             eventlet.listen((local_ip, port)),
             certfile=cert_path,
@@ -131,8 +137,8 @@ if __name__ == "__main__":
             server_side=True,
         )
 
-        print(" Server is running! Open your browser to:")
-        print(f" https://{local_ip}:{port}")
+        print("Server is running! Open your browser to:")
+        print(f"https://{local_ip}:{port}")
         print("=" * 60)
         print("Press CTRL+C to stop the server")
         print("=" * 60)
@@ -141,11 +147,11 @@ if __name__ == "__main__":
         eventlet.wsgi.server(listener, app)
 
     except PermissionError:
-        print(" Permission denied! Please run as administrator or use a different port")
+        print("Permission denied! Please run as administrator or use a different port")
     except OSError as e:
-        print(f" OS Error: {e}")
+        print(f"OS Error: {e}")
     except Exception as e:
-        print(f" Unexpected error: {type(e).__name__}: {e}")
+        print(f"Unexpected error: {type(e).__name__}: {e}")
         import traceback
 
         traceback.print_exc()

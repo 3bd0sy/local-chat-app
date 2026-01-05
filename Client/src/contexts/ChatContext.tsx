@@ -127,7 +127,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const handleDisconnect = useCallback(() => {
     showToast("Disconnected", "Connection to server lost", "error");
 
-    // setConnected(false);
     setTimeout(() => {
       setConnected(false);
     }, 100);
@@ -139,7 +138,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       setMyInfo({
         sid: data.sid,
         ip: data.ip,
-        username: data.username,
+        username: data.username || "Anonymous",
         status: "online",
       });
 
@@ -147,10 +146,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       setTimeout(() => {
         if (socketService.isConnectedState()) {
           socketService.emit("get_online_users").catch((error) => {
-            console.warn(" Failed to get online users:", error);
+            console.warn("Failed to get online users:", error);
           });
         } else {
-          console.warn(" Socket not connected, delaying get_online_users");
+          console.warn("Socket not connected, delaying get_online_users");
           setTimeout(() => {
             if (socketService.isConnectedState()) {
               socketService.emit("get_online_users").catch(() => {});
@@ -424,9 +423,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
           message: messageText,
           timestamp,
           messageId,
-        } )
+        })
         .catch((error) => {
-          console.error(" Failed to send message:", error);
+          console.error("Failed to send message:", error);
           showToast("Error", "Failed to send message", "error");
         });
 
@@ -449,7 +448,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         );
 
         if (isDuplicate) {
-          console.warn("⚠️ Duplicate message prevented:", {
+          console.warn("Duplicate message prevented:", {
             id: messageId,
             message: messageText.substring(0, 30),
           });
@@ -470,7 +469,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
     if (room) {
       socketService.emit("leave_chat", { room_id: room }).catch((error) => {
-        console.warn(" Failed to emit leave_chat:", error);
+        console.warn("Failed to emit leave_chat:", error);
       });
     }
 
@@ -490,11 +489,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       try {
         await socketService.connect();
       } catch (error) {
-        console.error(" Failed to auto-connect:", error);
+        console.error("Failed to auto-connect:", error);
 
         setTimeout(() => {
           socketService.connect().catch(() => {
-            console.warn(" Second connection attempt failed");
+            console.warn("Second connection attempt failed");
           });
         }, 3000);
       }

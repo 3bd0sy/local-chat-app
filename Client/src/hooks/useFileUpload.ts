@@ -110,7 +110,7 @@ export const useFileUpload = () => {
 
       // Check for duplicate upload
       if (isDuplicateUpload(finalUploadId)) {
-        console.warn("⚠️ Duplicate upload detected, skipping:", finalUploadId);
+        console.warn("Duplicate upload detected, skipping:", finalUploadId);
         onError?.("Duplicate upload detected");
         return;
       }

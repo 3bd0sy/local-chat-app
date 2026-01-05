@@ -105,7 +105,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
             pc.addTrack(videoTrack, newStream);
           }
         } else {
-          console.log("⚠️ No peer connection or video track", {
+          console.log("No peer connection or video track", {
             hasPeerConnection: !!pc,
             hasVideoTrack: !!videoTrack,
           });
@@ -235,7 +235,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
     try {
       webrtcService.cleanup();
     } catch (err) {
-      console.warn(" WebRTC cleanup error:", err);
+      console.warn("WebRTC cleanup error:", err);
     }
 
     webrtcInitializedRef.current = false;
@@ -249,7 +249,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
         .emit("end_call", {
           room_id: roomToEnd,
         })
-        .catch((err) => console.warn(" Failed to emit end_call:", err));
+        .catch((err) => console.warn("Failed to emit end_call:", err));
     }
 
     setIsInCall(false);
@@ -298,7 +298,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
       roomId?: string
     ) => {
       if (isInitializingRef.current || webrtcInitializedRef.current) {
-        console.log(" WebRTC initialization already in progress");
+        console.log("WebRTC initialization already in progress");
         return;
       }
 
@@ -339,7 +339,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
           try {
             pc.addTrack(track, stream);
           } catch (error) {
-            console.error(" Error adding track:", error);
+            console.error("Error adding track:", error);
           }
         });
 
@@ -355,7 +355,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
 
         webrtcInitializedRef.current = true;
       } catch (error) {
-        console.error(" Error in initializeWebRTC:", error);
+        console.error("Error in initializeWebRTC:", error);
         showToast("Error", "Failed to start call", "error");
         endCall();
       } finally {
@@ -434,7 +434,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
             try {
               pc.addTrack(track, stream);
             } catch (error) {
-              console.error(" Error adding track:", error);
+              console.error("Error adding track:", error);
             }
           });
 
@@ -451,7 +451,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
           from_sid: socketId || "",
         });
       } catch (error) {
-        console.error(" Error handling offer:", error);
+        console.error("Error handling offer:", error);
         showToast("Error", "Failed to process call request", "error");
       }
     },
@@ -463,7 +463,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
       try {
         await webrtcService.handleAnswer(data.answer);
       } catch (error) {
-        console.error(" Error handling answer:", error);
+        console.error("Error handling answer:", error);
       }
     },
     []
@@ -478,7 +478,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({ children }) => {
 
         await webrtcService.addIceCandidate(data.candidate);
       } catch (error) {
-        console.warn(" Failed to add ICE candidate:", error);
+        console.warn("Failed to add ICE candidate:", error);
       }
     },
     []

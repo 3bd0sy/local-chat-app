@@ -3,7 +3,7 @@ HTTP route handlers for the Flask application
 """
 
 import os
-from flask import jsonify, request, send_from_directory
+from flask import jsonify, render_template, request, send_from_directory
 from services.network_service import get_local_ip
 from werkzeug.utils import secure_filename
 
@@ -15,6 +15,26 @@ def register_http_handlers(app):
     Args:
         app: Flask application instance
     """
+
+    @app.route("/")
+    def home():
+        return render_template("index.html")
+
+    app.static_folder = "templates/assets"
+    app.sounds_folder = "templates/sounds"
+    templates_dir = os.path.join(os.path.dirname(__file__), "templates")
+
+    @app.route("/assets/<path:filename>")
+    def serve_static(filename):
+        return send_from_directory(app.static_folder, filename)
+
+    @app.route("/sounds/<path:filename>")
+    def serve_sounds(filename):
+        return send_from_directory(app.sounds_folder, filename)
+
+    @app.route("/vite.svg")
+    def serve_vite_logo():
+        return send_from_directory(templates_dir, "vite.svg")
 
     @app.route("/api/my-ip")
     def get_my_ip():

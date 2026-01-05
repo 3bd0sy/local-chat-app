@@ -8,78 +8,11 @@ import json
 import shutil
 from datetime import datetime
 from flask import request, jsonify, send_file, current_app
-from werkzeug.utils import secure_filename
-from .allowed_extensions import ALLOWED_EXTENSIONS
-
-
-# File size limits
-MAX_FILE_SIZE = 50 * 1024 * 1024 * 1024  # 50 GB
-MAX_CHUNK_SIZE = 5 * 1024 * 1024  # 5 MB per chunk
-
-
-def allowed_file(filename):
-    """
-    Check if file extension is allowed
-
-    Args:
-        filename (str): Name of the file to check
-
-    Returns:
-        bool: True if extension is allowed, False otherwise
-    """
-    if "." not in filename:
-        return False
-
-    ext = filename.rsplit(".", 1)[1].lower()
-
-    # Combine all allowed extensions into one set
-    allowed_exts = {ext for category in ALLOWED_EXTENSIONS.values() for ext in category}
-
-    return ext in allowed_exts
-
-
-def get_file_category(filename):
-    """
-    Determine file category based on extension
-
-    Args:
-        filename (str): Name of the file
-
-    Returns:
-        str: Category name (images, videos, audio, etc.) or "other"
-    """
-    if "." not in filename:
-        return "other"
-
-    ext = filename.rsplit(".", 1)[1].lower()
-
-    for category, extensions in ALLOWED_EXTENSIONS.items():
-        if ext in extensions:
-            return category
-
-    return "other"
-
-
-def get_icon_for_category(category):
-    """
-    Get emoji icon for file category
-
-    Args:
-        category (str): File category
-
-    Returns:
-        str: Emoji icon
-    """
-    icons = {
-        "images": "🖼️",
-        "videos": "🎬",
-        "audio": "🎵",
-        "documents": "📄",
-        "archives": "📦",
-        "code": "💻",
-        "other": "📁",
-    }
-    return icons.get(category, "📁")
+from services.chunk_upload_service import upload_chunk_service
+from utils.files.metadata_manager import create_metadata
+from utils.files.file_validation import allowed_file
+from utils.files.constants import MAX_CHUNK_SIZE, MAX_FILE_SIZE
+from utils.files.allowed_extensions import ALLOWED_EXTENSIONS
 
 
 def register_file_handlers(app, socketio):
@@ -90,22 +23,6 @@ def register_file_handlers(app, socketio):
         app: Flask application instance
         socketio: SocketIO instance for real-time communication
     """
-
-    @app.after_request
-    def after_request(response):
-        """
-        Add CORS headers to all responses
-        This allows the frontend to make requests from a different origin
-        """
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add(
-            "Access-Control-Allow-Headers", "Content-Type,Authorization"
-        )
-        response.headers.add(
-            "Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS"
-        )
-        response.headers.add("Access-Control-Max-Age", "3600")
-        return response
 
     @app.route("/api/files/init", methods=["POST", "OPTIONS"])
     def init_upload():
@@ -180,32 +97,9 @@ def register_file_handlers(app, socketio):
                     400,
                 )
 
-            # Create temporary directory for chunks
-            temp_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], file_id)
-            os.makedirs(temp_dir, exist_ok=True)
-
-            # Save metadata to JSON file
-            metadata = {
-                "fileId": file_id,
-                "fileName": secure_filename(file_name),  # Sanitized filename
-                "originalName": file_name,  # Original filename
-                "fileSize": file_size,
-                "fileType": data.get("fileType", ""),
-                "fileCategory": get_file_category(file_name),
-                "fileIcon": get_icon_for_category(get_file_category(file_name)),
-                "totalChunks": total_chunks,
-                "roomId": data.get("roomId"),
-                "partnerSid": data.get("partnerSid"),
-                "uploadedChunks": [],  # Track uploaded chunk indices
-                "createdAt": datetime.now().isoformat(),
-            }
-
-            metadata_path = os.path.join(temp_dir, "metadata.json")
-            with open(metadata_path, "w", encoding="utf-8") as f:
-                json.dump(metadata, f, ensure_ascii=False, indent=2)
-
+            create_metadata(file_id, file_name, file_size, total_chunks, data)
             print(
-                f"📁 Upload initialized: {file_name} ({file_size:,} bytes, {total_chunks} chunks)"
+                f"Upload initialized: {file_name} ({file_size:,} bytes, {total_chunks} chunks)"
             )
 
             return jsonify(
@@ -217,11 +111,11 @@ def register_file_handlers(app, socketio):
             )
 
         except ValueError as e:
-            print(f" Init upload error (Value): {str(e)}")
+            print(f"Init upload error (Value): {str(e)}")
             return jsonify({"success": False, "error": "Invalid data format"}), 400
 
         except Exception as e:
-            print(f" Init upload error: {str(e)}")
+            print(f"Init upload error: {str(e)}")
             return jsonify({"success": False, "error": str(e)}), 500
 
     @app.route("/api/files/upload-chunk", methods=["POST", "OPTIONS"])
@@ -276,44 +170,16 @@ def register_file_handlers(app, socketio):
                     404,
                 )
 
-            # Save chunk with zero-padded index (e.g., chunk_000000, chunk_000001)
-            chunk_path = os.path.join(temp_dir, f"chunk_{chunk_index:06d}")
-            chunk_file.save(chunk_path)
-
-            # Update metadata with uploaded chunk index
-            metadata_path = os.path.join(temp_dir, "metadata.json")
-            with open(metadata_path, "r", encoding="utf-8") as f:
-                metadata = json.load(f)
-
-            # Add chunk index if not already recorded
-            if chunk_index not in metadata["uploadedChunks"]:
-                metadata["uploadedChunks"].append(chunk_index)
-                metadata["lastUpdate"] = datetime.now().isoformat()
-
-            # Save updated metadata
-            with open(metadata_path, "w", encoding="utf-8") as f:
-                json.dump(metadata, f, ensure_ascii=False, indent=2)
-
-            # Calculate progress percentage
-            progress = (len(metadata["uploadedChunks"]) / total_chunks) * 100
-
-            # Log progress every 10%
-            if len(metadata["uploadedChunks"]) % max(1, total_chunks // 10) == 0:
-                print(
-                    f"📦 Upload progress: {progress:.1f}% ({len(metadata['uploadedChunks'])}/{total_chunks} chunks)"
-                )
-
+            data = upload_chunk_service(file_id, chunk_index, total_chunks, chunk_file)
             return jsonify(
                 {
                     "success": True,
-                    "chunkIndex": chunk_index,
-                    "uploadedChunks": len(metadata["uploadedChunks"]),
-                    "progress": round(progress, 2),
+                    **data,
                 }
             )
 
         except Exception as e:
-            print(f" Chunk upload error: {str(e)}")
+            print(f"Chunk upload error: {str(e)}")
             return jsonify({"success": False, "error": str(e)}), 500
 
     @app.route("/api/files/complete", methods=["POST", "OPTIONS"])
@@ -365,7 +231,7 @@ def register_file_handlers(app, socketio):
                     400,
                 )
 
-            print(f"🔄 Merging {total_chunks} chunks for: {file_name}")
+            print(f"Merging {total_chunks} chunks for: {file_name}")
 
             # Create final file path
             final_path = os.path.join(
@@ -391,7 +257,7 @@ def register_file_handlers(app, socketio):
 
             if final_size != expected_size:
                 print(
-                    f"  Warning: Size mismatch! Expected: {expected_size}, Got: {final_size}"
+                    f"Warning: Size mismatch! Expected: {expected_size}, Got: {final_size}"
                 )
 
             # Delete temporary directory and chunks
@@ -414,7 +280,7 @@ def register_file_handlers(app, socketio):
                 }
 
                 socketio.emit("file_received", file_data, to=partner_sid)
-                print(f"📤 File notification sent to partner: {partner_sid}")
+                print(f"File notification sent to partner: {partner_sid}")
 
             elif room_id:
                 socketio.emit(
@@ -445,7 +311,7 @@ def register_file_handlers(app, socketio):
             )
 
         except Exception as e:
-            print(f" Upload completion error: {str(e)}")
+            print(f"Upload completion error: {str(e)}")
 
             # Cleanup temporary directory on error
             try:
@@ -486,7 +352,7 @@ def register_file_handlers(app, socketio):
             return send_file(file_path, as_attachment=True, download_name=original_name)
 
         except Exception as e:
-            print(f" Download error: {str(e)}")
+            print(f"Download error: {str(e)}")
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/files/cleanup/<file_id>", methods=["DELETE", "OPTIONS"])
@@ -509,13 +375,13 @@ def register_file_handlers(app, socketio):
 
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
-                print(f"🗑️  Cleaned up upload: {file_id}")
+                print(f"Cleaned up upload: {file_id}")
                 return jsonify({"success": True, "message": "Upload cleaned up"})
             else:
                 return jsonify({"success": False, "error": "Upload not found"}), 404
 
         except Exception as e:
-            print(f" Cleanup error: {str(e)}")
+            print(f"Cleanup error: {str(e)}")
             return jsonify({"success": False, "error": str(e)}), 500
 
     @app.route("/api/files/supported-types", methods=["GET", "OPTIONS"])
@@ -542,4 +408,4 @@ def register_file_handlers(app, socketio):
             }
         )
 
-    print("📁 File upload handlers registered successfully")
+    print("File upload handlers registered successfully")

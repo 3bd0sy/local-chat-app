@@ -43,7 +43,7 @@ export const useChatActions = () => {
       });
       const existingUpload = uploads.find((u) => u.uploadId === uploadId);
       if (existingUpload) {
-        console.warn("⚠️ Upload with same ID already exists:", uploadId);
+        console.warn("Upload with same ID already exists:", uploadId);
         return;
       }
       uploadFile(
@@ -52,10 +52,10 @@ export const useChatActions = () => {
         partnerInfo.sid,
         uploadId,
         () => {
-          console.log("✅ File upload completed successfully");
+          console.log("File upload completed successfully");
         },
         (error) => {
-          console.error(" Upload error:", error);
+          console.error("Upload error:", error);
         }
       );
 
